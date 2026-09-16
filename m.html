@@ -353,6 +353,8 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   const curFont=()=>FONTS[+$('fFont').value]||FONTS[0];
   const curPt =()=>SIZES[+$('fSize').value]?SIZES[+$('fSize').value][1]:16;
   const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const isImgUrl=t=>{t=String(t||'').trim();
+    return /^https?:\/\/\S+$/i.test(t)&&(/\.(png|jpe?g|gif|webp|bmp)(\?|#|$)/i.test(t)||/(mmbiz\.|qpic\.cn|qlogo\.cn)/i.test(t));};
 
   function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2400);}
   function popPill(el){el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');}
@@ -424,7 +426,8 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       }
     });
     // 只有一张图、没有文字 → 是你自己贴的图（始终显示）；否则算文章原图（默认只在小窗）
-    const userImg = d.body.querySelectorAll('img').length===1 && !d.body.textContent.trim();
+    const _ims=d.body.querySelectorAll('img'), _tx=d.body.textContent.trim();
+    const userImg = _ims.length===1 && (!_tx || isImgUrl(_tx));
     d.body.querySelectorAll('img').forEach(im=>im.classList.add(userImg?'usr':'ext'));
     [...d.body.querySelectorAll('p,div')].forEach(e=>{if(!e.textContent.trim()&&!e.querySelector('img'))e.remove();});
     return d.body.innerHTML;
@@ -516,14 +519,14 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 
   /* ── 裁剪引擎 ── */
   const SB_HTML='<!doctype html><meta charset="utf-8"><script>'
-    +"window.addEventListener('message',async(e)=>{const d=e.data||{};if(d.t!=='crop')return;"
+    +"window.addEventListener('message',async(e)=>{const d=e.data||{};if(d.t!=='crop'&&d.t!=='raw')return;"
     +"try{const im=new Image();im.crossOrigin='anonymous';"
     +"await new Promise((res,rej)=>{im.onload=res;im.onerror=()=>rej(new Error('load'));im.src=d.url;});"
-    +"const c=document.createElement('canvas');c.width=d.w;c.height=d.h;const x=c.getContext('2d');"
-    +"x.fillStyle='#fff';x.fillRect(0,0,d.w,d.h);try{x.imageSmoothingQuality='high';}catch(e){}"
-    +"x.drawImage(im,0,0,d.w,d.h);"
-    +"parent.postMessage({t:'crop',id:d.id,ok:true,data:c.toDataURL('image/jpeg',0.93)},'*');}"
-    +"catch(err){parent.postMessage({t:'crop',id:d.id,ok:false,err:String((err&&err.name)||err)},'*');}});"
+    +"const W=d.w||im.naturalWidth,H=d.h||im.naturalHeight;const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');"
+    +"x.fillStyle='#fff';x.fillRect(0,0,W,H);try{x.imageSmoothingQuality='high';}catch(e){}"
+    +"x.drawImage(im,0,0,W,H);"
+    +"const _m=d.mime||'image/png';const _o=d.t==='raw'?c.toDataURL(_m,_m==='image/jpeg'?0.93:undefined):c.toDataURL('image/jpeg',0.93);parent.postMessage({t:d.t,id:d.id,ok:true,data:_o},'*');}"
+    +"catch(err){parent.postMessage({t:d.t,id:d.id,ok:false,err:String((err&&err.name)||err)},'*');}});"
     +'<\/script>';
   function drawCrop(im,tw,th){
     const sw=im.naturalWidth,sh=im.naturalHeight;if(!sw||!sh)throw new Error('no size');
@@ -574,6 +577,16 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       setTimeout(()=>{window.removeEventListener('message',onMsg);rej(new Error('timeout'));},15000);
     }));
   }
+  function rawViaSandbox(src,mime){
+    return ensureSandbox().then(()=>new Promise((res,rej)=>{
+      const id=++sbSeq;
+      const onMsg=e=>{const d=e.data;if(!d||d.t!=='raw'||d.id!==id)return;
+        window.removeEventListener('message',onMsg);d.ok?res(d.data):rej(new Error(d.err||'fail'));};
+      window.addEventListener('message',onMsg);
+      try{sbWin.postMessage({t:'raw',id:id,url:src,mime:mime||'image/png'},'*');}catch(e){rej(e);}
+      setTimeout(()=>{window.removeEventListener('message',onMsg);rej(new Error('timeout'));},20000);
+    }));
+  }
   async function cropImg(i,tw,th){
     const x=imgs[i];if(!x)return;
     const from=x.el._orig||x.el.src||x.src;
@@ -598,7 +611,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   /* ── 小窗：提取图片 ── */
   const IC_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.4"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   const IC_DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
-  const EMPTY='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5a2 2 0 0 1 2.8 0L16 17.5"/><path d="M14.6 14.9l1.5-1.5a2 2 0 0 1 2.8 0L21 15.5"/></svg>粘贴正文后，较大的图片会自动提取到这里<br>点「插入正文」放回正文，或直接复制 / 下载 / 统一尺寸</div>';
+  const EMPTY='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5a2 2 0 0 1 2.8 0L16 17.5"/><path d="M14.6 14.9l1.5-1.5a2 2 0 0 1 2.8 0L21 15.5"/></svg>粘贴正文后，较大的图片会自动提取到这里<br>点「复制」后到正文长按粘贴，或点「插入正文」直接放进来</div>';
   function extract(){
     const seen=new Set();
     imgs=[...doc.querySelectorAll('img')].filter(im=>{
@@ -670,7 +683,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       await navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([h],{type:'text/html'})})]);
       toast('已复制，切到正文位置粘贴即可 ✅');return;
     }catch(e){}
-    toast('复制被浏览器拦了，请直接「拖」到左边正文，或用「下载」');
+    toast('系统剪贴板不可用，已改用「插入正文」或「下载」');
   }
   function copyImg(i){
     const x=imgs[i];if(!x)return;
@@ -686,7 +699,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       const sel=window.getSelection();sel.removeAllRanges();sel.addRange(r);
       let ok=false;try{ok=document.execCommand('copy');}catch(e){}
       sel.removeAllRanges();box.remove();
-      if(ok)toast('图片已复制 ✅');
+      if(ok)toast('图片已复制 ✅ 到正文长按粘贴');
       else copyImgFallback(i);
     };
     if(im.complete)setTimeout(finish,30);
@@ -883,6 +896,9 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
         const url=await new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result);fr.readAsDataURL(f);});
         insertHTML('<img class="usr" src="'+url+'" alt=""><p><br></p>');
       }
+    }else if(!htmlHasImg&&isImgUrl(text)){
+      imgPasted=true;
+      insertHTML('<img class="usr" src="'+text.trim()+'" referrerpolicy="no-referrer" alt=""><p><br></p>');
     }else if(html){
       insertHTML(sanitize(html));
     }else if(text){
@@ -894,8 +910,8 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       const n=doc.querySelectorAll('img:not(.usr)').length;
       extract();
       const chars=doc.innerText.replace(/\s+/g,'').length;
-      if(imgPasted){settle();toast('图片已放入正文 ✅');}
-      else if(n){settle();toast('已识别 '+chars+' 字 · 图片 '+n+' 张（已进小窗，切到「图片」页可插入正文 / 下载）');}
+      if(imgPasted){settle();toast('图片已放入正文 ✅ 可再长按选中调整');}
+      else if(n){settle();toast('已识别 '+chars+' 字 · 图片 '+n+' 张（已进小窗，切到「图片」页可复制 / 插入正文）');}
       else{
         const hasPh=/^\s*图片\s*$/m.test(text||'');
         toast(hasPh?'正文已识别，但剪贴板里没带图片数据（正文里的「图片」只是占位文字）——请在浏览器打开文章后重新复制':'正文已识别，未检测到图片');
@@ -965,41 +981,45 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     if(parseFloat(getComputedStyle(n).textIndent)>0){e.preventDefault();n.classList.add('flush');toast('已取消该段首行缩进');}
   });
 
-  window.__m={extract:extract,stats:stats,imgs:function(){return imgs;},toast:toast};
+  window.__m={extract:extract,stats:stats,imgs:function(){return imgs;},toast:toast,raw:rawViaSandbox};
   applySettings();stats();renderImgs();
 })();
 </script>
-<script>/* 手机版增强：分页切换 / 插入正文 / 抽屉 / 选区保护 */
+<script>/* 手机版增强：分页切换 / 复制 / 下载 / 插入正文 / 抽屉 / 选区保护 */
 (function(){
   var $=function(id){return document.getElementById(id);};
   var doc=$('doc');
   var M=window.__m||{};
+  var list=$('imgList');
   var saved=null;
+  var LBL={copy:'复制',dl:'下载'};
 
-  function inDoc(n){return !!n&&(n===doc||doc.contains(n));}
+  function toast(m){ if(M.toast)M.toast(m); }
+  function imgsOf(){ return (M.imgs&&M.imgs())||[]; }
+  function inDoc(n){ return !!n&&(n===doc||doc.contains(n)); }
+
+  /* ───────── 正文选区保护（点样式按钮不丢选区） ───────── */
   function saveSel(){
     var s=window.getSelection();
     if(!s||!s.rangeCount)return;
     var r=s.getRangeAt(0);
     if(!inDoc(r.commonAncestorContainer))return;
-    if(document.activeElement!==doc&&r.collapsed)return;   // 焦点不在正文且已折叠 → 不覆盖旧选区
+    if(document.activeElement!==doc&&r.collapsed)return;
     saved=r.cloneRange();
   }
   function restoreSel(){
     if(!saved)return;
     try{var s=window.getSelection();s.removeAllRanges();s.addRange(saved);}catch(e){}
   }
-  window.__mRestore=restoreSel;                            // 主脚本的样式按钮会调它
+  window.__mRestore=restoreSel;
 
-  document.addEventListener('selectionchange',function(){
-    if(document.activeElement===doc)saveSel();
-  });
+  document.addEventListener('selectionchange',function(){ if(document.activeElement===doc)saveSel(); });
   doc.addEventListener('keyup',saveSel);
   doc.addEventListener('mouseup',saveSel);
   doc.addEventListener('touchend',function(){setTimeout(saveSel,0);},{passive:true});
   doc.addEventListener('blur',function(){setTimeout(saveSel,0);});
 
-  /* ── 把图片插入正文（插到"刚选中的那一段"之后；没选过就追加到末尾） ── */
+  /* ───────── 把图片插入正文（插到"上次点过的那一段"之后） ───────── */
   function insertAt(src){
     if(!src)return false;
     var p=document.createElement('p');
@@ -1022,16 +1042,103 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     return true;
   }
 
-  /* ── 给小窗每张图补「插入正文」按钮，并给图标按钮补上文字 ── */
-  var list=$('imgList');
-  var LBL={copy:'复制',dl:'下载'};
+  /* ───────── 图片字节获取（用沙箱，绕开跨域） ───────── */
+  function dataUrlToBlob(du){
+    var i=du.indexOf(',');
+    var head=du.slice(0,i), body=du.slice(i+1);
+    var mime=(head.match(/:(.*?);/)||[])[1]||'image/png';
+    var isB64=/;base64/i.test(head);
+    var bin=isB64?atob(body):decodeURIComponent(body);
+    var u8=new Uint8Array(bin.length);
+    for(var k=0;k<bin.length;k++)u8[k]=bin.charCodeAt(k);
+    return new Blob([u8],{type:mime});
+  }
+  async function canvasPng(blob){
+    try{
+      var bmp=await createImageBitmap(blob);
+      var c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;
+      c.getContext('2d').drawImage(bmp,0,0);
+      return await new Promise(function(r){c.toBlob(r,'image/png');});
+    }catch(e){ return blob; }
+  }
+  async function blobOf(src,mime){
+    mime=mime||'image/png';
+    if(/^data:/i.test(src)){
+      var b=await (await fetch(src)).blob();
+      if(b.type===mime)return b;
+      if(mime==='image/png')return await canvasPng(b);
+      return b;
+    }
+    if(M.raw){
+      var du=await M.raw(src,mime);      // 沙箱：Origin 为 null，微信图片放行
+      return dataUrlToBlob(du);
+    }
+    var r=await fetch(src,{referrerPolicy:'no-referrer'});
+    return await r.blob();
+  }
+
+  /* ───────── 复制图片（必须在点击手势内同步调用 clipboard.write） ───────── */
+  function copyImg(i){
+    var x=imgsOf()[i];
+    if(!x){ toast('没找到这张图，请重试'); return; }
+    var src=x.src;
+    var html='<img src="'+src+'" referrerpolicy="no-referrer" alt="">';
+    var canWrite=!!(navigator.clipboard&&window.ClipboardItem)&&window.isSecureContext;
+    if(canWrite){
+      try{
+        // 值传 Promise：write() 本身仍是同步的，才不丢"用户手势"
+        var item=new ClipboardItem({
+          'text/html':new Blob([html],{type:'text/html'}),
+          'text/plain':src,
+          'image/png':blobOf(src,'image/png')
+        });
+        navigator.clipboard.write([item]).then(function(){
+          toast('图片已复制 ✅ 到正文长按粘贴即可');
+        }).catch(function(){
+          insertFallback(i,src,'系统剪贴板拒绝写入');
+        });
+        return;
+      }catch(e){}
+    }
+    insertFallback(i,src,'此浏览器不支持复制图片');
+  }
+  function insertFallback(i,src,why){
+    if(insertAt(src)){
+      switchTab('doc');
+      toast(why+'，已直接插入正文 ✅');
+    }else{
+      toast(why+'，请改用「下载」');
+    }
+  }
+
+  /* ───────── 下载图片 ───────── */
+  async function dlImg(i){
+    var x=imgsOf()[i];
+    if(!x){ toast('没找到这张图，请重试'); return; }
+    var src=x.src;
+    var ext=/^data:image\/jpe?g/i.test(src)?'jpg':'png';
+    try{
+      var blob=await blobOf(src,'image/png');
+      if(/jpe?g/i.test(blob.type||''))ext='jpg';
+      var url=URL.createObjectURL(blob);
+      var a=document.createElement('a');
+      a.href=url;a.download='图片'+(i+1)+'.'+ext;
+      document.body.appendChild(a);a.click();a.remove();
+      setTimeout(function(){URL.revokeObjectURL(url);},6000);
+      toast('已下载 图片'+(i+1)+' ✅');
+    }catch(e){
+      try{ window.open(src,'_blank','noopener,noreferrer'); toast('已在新标签打开，长按图片可保存到相册'); }
+      catch(e2){ toast('下载失败：请长按缩略图，用系统菜单保存'); }
+    }
+  }
+
+  /* ───────── 小窗按钮：注入文字标签 + 「插入正文」 ───────── */
   function inject(){
     if(!list)return;
     var items=list.querySelectorAll('.img-item');
     for(var i=0;i<items.length;i++){
       var it=items[i],acts=it.querySelector('.acts'),th=it.querySelector('img.thumb');
       if(!acts||!th)continue;
-      // 图标按钮 → 图标+文字（手机上看得懂）
       var ms=acts.querySelectorAll('.mini');
       for(var k=0;k<ms.length;k++){
         var a=ms[k].getAttribute('data-a');
@@ -1048,28 +1155,35 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       acts.insertBefore(b,acts.firstChild);
     }
   }
-  if(list){
-    new MutationObserver(inject).observe(list,{childList:true,subtree:true});
-    inject();
-    list.addEventListener('click',function(e){
-      var b=e.target.closest('[data-a="ins"]');if(!b)return;
-      var i=+b.getAttribute('data-i');
-      var arr=(M.imgs&&M.imgs())||[];
-      var src=arr[i]?arr[i].src:'';
-      if(!src){if(M.toast)M.toast('没找到这张图，请重试');return;}
-      if(insertAt(src)){
-        switchTab('doc');
-        if(M.toast)M.toast('已插入正文 ✅ 想挪位置可再长按选中');
-      }
-    });
-  }
 
-  /* ── 分页切换 ── */
+  /* ───────── 统一的点击处理（捕获阶段拦下，避免和电脑版逻辑重复执行） ───────── */
+  document.addEventListener('click',function(e){
+    var t=e.target;
+    var b=(t&&t.closest)?t.closest('[data-a]'):null;
+    if(!b||!list||!list.contains(b))return;
+    var a=b.getAttribute('data-a');
+    if(a!=='copy'&&a!=='dl'&&a!=='ins')return;          // 裁剪/还原交给电脑版逻辑
+    e.preventDefault();e.stopPropagation();
+    var i=+b.getAttribute('data-i');
+    if(a==='copy')copyImg(i);
+    else if(a==='dl')dlImg(i);
+    else{
+      var x=imgsOf()[i];
+      var src=x?x.src:'';
+      if(!src){toast('没找到这张图，请重试');return;}
+      if(insertAt(src)){switchTab('doc');toast('已插入正文 ✅ 想挪位置可长按选中');}
+    }
+  },true);
+  if(list)new MutationObserver(inject).observe(list,{childList:true,subtree:true});
+
+  /* ───────── 分页切换 ───────── */
+  function scrollTopOf(v){
+    var sc=(v==='doc')?document.querySelector('.doc-scroll'):document.querySelector('.img-body');
+    if(sc)sc.scrollTop=0;
+  }
   function switchTab(v){
     var tabs=document.querySelectorAll('.tab');
-    for(var k=0;k<tabs.length;k++){
-      tabs[k].classList.toggle('on',tabs[k].getAttribute('data-v')===v);
-    }
+    for(var k=0;k<tabs.length;k++)tabs[k].classList.toggle('on',tabs[k].getAttribute('data-v')===v);
     var vd=$('viewDoc'),vi=$('viewImg');
     if(vd)vd.classList.toggle('on',v==='doc');
     if(vi)vi.classList.toggle('on',v==='img');
@@ -1079,14 +1193,15 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     for(var k=0;k<tabs.length;k++){
       (function(t){
         t.addEventListener('click',function(){
-          switchTab(t.getAttribute('data-v'));
-          if(t.getAttribute('data-v')==='img')setTimeout(inject,60);
+          var v=t.getAttribute('data-v');
+          switchTab(v);
+          if(v==='img')setTimeout(inject,60);
         });
       })(tabs[k]);
     }
   })();
 
-  /* ── 抽屉 ── */
+  /* ───────── 抽屉 ───────── */
   function openSheet(id){var el=$(id);if(el)el.classList.add('on');}
   function closeSheet(el){
     while(el){
@@ -1104,13 +1219,14 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     }
   })();
 
-  /* ── 选完字号给个反馈 ── */
   ['fFont','fSize'].forEach(function(id){
     var el=$(id);if(!el)return;
     el.addEventListener('change',function(){
       if(M.toast&&this.options&&this.options[this.selectedIndex])M.toast('已套用：'+this.options[this.selectedIndex].text);
     });
   });
+
+  inject();
 })();</script>
 </body>
 </html>
