@@ -260,15 +260,13 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   </header>
 
   <main class="stage">
-    <!-- 正文 -->
     <section class="view on" id="viewDoc">
       <div class="doc-scroll">
         <div id="doc" class="doc" contenteditable="true" spellcheck="false" data-ph="微信文章：全选复制后长按这里粘贴…"></div>
       </div>
-      <div class="styles-bar" id="stylesBar"><button class="sbtn" data-style="h1">标题</button><button class="sbtn" data-style="p">正文</button><button class="sbtn" data-style="bold">加粗</button><button class="sbtn" data-style="cen">居中</button><button class="sbtn" data-style="rig">右对齐</button><button class="sbtn" data-style="flush">去缩进</button></div>
+      <div class="styles-bar" id="stylesBar"><button type="button" class="sbtn" data-style="h1">标题</button><button type="button" class="sbtn" data-style="p">正文</button><button type="button" class="sbtn" data-style="bold">加粗</button><button type="button" class="sbtn" data-style="cen">居中</button><button type="button" class="sbtn" data-style="rig">右对齐</button><button type="button" class="sbtn" data-style="flush">去缩进</button></div>
     </section>
 
-    <!-- 图片 -->
     <section class="view" id="viewImg">
       <div class="img-body" id="imgList"></div>
       <div class="imgset">
@@ -300,7 +298,6 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 <div class="toast" id="toast"></div>
 <div class="viewer" id="viewer"><img id="viewerImg" alt=""></div>
 
-<!-- 排版格式 -->
 <div class="sheet" id="sheetFmt">
   <div class="sheet-mask" data-close></div>
   <div class="sheet-panel">
@@ -312,7 +309,6 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   </div>
 </div>
 
-<!-- 更多 -->
 <div class="sheet" id="sheetMore">
   <div class="sheet-mask" data-close></div>
   <div class="sheet-panel">
@@ -322,7 +318,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       <a class="nav-item" href="https://www.gypec.edu.cn/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15.2 15.2 0 0 1 0 18 15.2 15.2 0 0 1 0-18z"/></svg>学校官网<span class="sub">www.gypec.edu.cn</span></a>
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
-      <div class="is-hint" style="line-height:1.9">手机用法：微信文章 →「…」复制链接后在浏览器打开，全选正文和图片复制 → 回到本页长按粘贴 → 切到「图片」页把要用的图<b>插入正文</b>，或直接<b>下载</b>到相册。</div>
+      <div class="is-hint" style="line-height:1.9">手机用法：微信文章 →「…」复制链接后在浏览器打开，全选正文和图片复制 → 回到本页长按粘贴 → <b>长按选中文字后，用下面那排按钮设标题 / 加粗 / 居中</b>；切到「图片」页把要用的图插入正文或下载。</div>
     </div>
   </div>
 </div>
@@ -934,7 +930,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   /* ── 初始化 ── */
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
-  document.querySelectorAll('.sbtn').forEach(b=>{b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('touchstart',function(){if(window.__mRestore)window.__mRestore();},{passive:true});b.addEventListener('click',function(){if(window.__mRestore)window.__mRestore();applyStyle(b.dataset.style);});});
+  document.querySelectorAll('.sbtn').forEach(function(b){b.addEventListener('mousedown',function(e){e.preventDefault();});b.addEventListener('click',function(e){e.preventDefault();if(window.__mStyle){window.__mStyle(b.dataset.style);return;}if(window.__mRestore)window.__mRestore();applyStyle(b.dataset.style);});});
   ['fFont','fSize','fLine','fIndent'].forEach(id=>{$(id).addEventListener('input',applySettings);$(id).addEventListener('change',applySettings);});
   $('formatBtn').onclick=formatDoc;
   $('copyBtn').onclick=copyRich;
@@ -991,33 +987,54 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   var doc=$('doc');
   var M=window.__m||{};
   var list=$('imgList');
-  var saved=null;
+  var sRange=null, cRange=null;   // sRange=最近一次"有内容"的选区；cRange=最近一次光标
   var LBL={copy:'复制',dl:'下载'};
 
   function toast(m){ if(M.toast)M.toast(m); }
   function imgsOf(){ return (M.imgs&&M.imgs())||[]; }
   function inDoc(n){ return !!n&&(n===doc||doc.contains(n)); }
 
-  /* ───────── 正文选区保护（点样式按钮不丢选区） ───────── */
-  function saveSel(){
+  /* ───────── 选区记忆（手机点按钮会把选区清掉，必须自己记住） ───────── */
+  function remember(){
     var s=window.getSelection();
     if(!s||!s.rangeCount)return;
     var r=s.getRangeAt(0);
     if(!inDoc(r.commonAncestorContainer))return;
-    if(document.activeElement!==doc&&r.collapsed)return;
-    saved=r.cloneRange();
+    cRange=r.cloneRange();
+    if(!r.collapsed)sRange=r.cloneRange();
+  }
+  function pickRange(){
+    if(sRange)return sRange;
+    var s=window.getSelection();
+    if(s&&s.rangeCount){
+      var r=s.getRangeAt(0);
+      if(inDoc(r.commonAncestorContainer))return r;
+    }
+    return cRange;
   }
   function restoreSel(){
-    if(!saved)return;
-    try{var s=window.getSelection();s.removeAllRanges();s.addRange(saved);}catch(e){}
+    var r=pickRange();
+    if(!r)return false;
+    try{var s=window.getSelection();s.removeAllRanges();s.addRange(r);}catch(e){return false;}
+    return true;
   }
   window.__mRestore=restoreSel;
 
-  document.addEventListener('selectionchange',function(){ if(document.activeElement===doc)saveSel(); });
-  doc.addEventListener('keyup',saveSel);
-  doc.addEventListener('mouseup',saveSel);
-  doc.addEventListener('touchend',function(){setTimeout(saveSel,0);},{passive:true});
-  doc.addEventListener('blur',function(){setTimeout(saveSel,0);});
+  document.addEventListener('selectionchange',remember);
+  doc.addEventListener('keyup',remember);
+  doc.addEventListener('mouseup',remember);
+  doc.addEventListener('blur',function(){setTimeout(remember,0);});
+  // 手指点在正文里 → 若是"放下光标"（折叠），就清掉旧的选区记忆，避免误套用到上一次选的段落
+  doc.addEventListener('touchend',function(){
+    setTimeout(function(){
+      var s=window.getSelection();
+      if(!s||!s.rangeCount){return;}
+      var r=s.getRangeAt(0);
+      if(!inDoc(r.commonAncestorContainer))return;
+      if(r.collapsed){sRange=null;cRange=r.cloneRange();}
+      else{sRange=r.cloneRange();cRange=r.cloneRange();}
+    },0);
+  },{passive:true});
 
   /* ───────── 把图片插入正文（插到"上次点过的那一段"之后） ───────── */
   function insertAt(src){
@@ -1028,8 +1045,9 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     p.appendChild(im);
     var ref=null;
     try{
-      if(saved&&inDoc(saved.startContainer)){
-        var n=saved.startContainer;
+      var r0=pickRange();
+      if(r0&&inDoc(r0.startContainer)){
+        var n=r0.startContainer;
         while(n&&n!==doc&&!/^(P|H1|H2|H3|H4|LI|BLOCKQUOTE|DIV)$/.test(n.tagName))n=n.parentNode;
         if(n&&n!==doc)ref=n;
       }
@@ -1041,6 +1059,84 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     try{p.scrollIntoView({block:'center'});}catch(e){}
     return true;
   }
+
+  /* ───────── 手机端排版样式（不依赖 execCommand，自己做 DOM） ───────── */
+  var BLOCK_SEL='p,h1,h2,h3,h4,li,blockquote';
+  var TIP={h1:'已设为标题',p:'已设为正文',bold:'已切换加粗',cen:'已居中',rig:'已右对齐',flush:'已取消首行缩进'};
+
+  function blockFrom(node){
+    if(!node)return null;
+    if(node.nodeType===3)node=node.parentNode;
+    while(node&&node!==doc&&!/^(P|H1|H2|H3|H4|LI|BLOCKQUOTE|DIV)$/.test(node.tagName))node=node.parentNode;
+    return (node&&node!==doc)?node:null;
+  }
+  function blocksOf(range){
+    var a=blockFrom(range.startContainer), b=blockFrom(range.endContainer);
+    if(!a&&!b)return [];
+    if(!a)return [b];
+    if(!b)return [a];
+    if(a===b)return [a];
+    var all=[].slice.call(doc.querySelectorAll(BLOCK_SEL))
+      .filter(function(el){return !el.querySelector(BLOCK_SEL);});
+    var ia=all.indexOf(a), ib=all.indexOf(b);
+    if(ia<0||ib<0)return [a,b];
+    return all.slice(Math.min(ia,ib),Math.max(ia,ib)+1);
+  }
+  function isWholeBold(b){
+    var st=b.querySelector('strong,b');
+    if(!st)return false;
+    var t=b.textContent.replace(/\s+/g,''), s=st.textContent.replace(/\s+/g,'');
+    return !!t&&t===s;
+  }
+  function unwrapBold(b){
+    [].slice.call(b.querySelectorAll('strong,b')).forEach(function(e){
+      if(!e.parentNode)return;
+      var frag=document.createDocumentFragment();
+      while(e.firstChild)frag.appendChild(e.firstChild);
+      e.parentNode.replaceChild(frag,e);
+    });
+  }
+  function tagAs(b,tag){
+    if(!b||b.tagName.toLowerCase()===tag)return;
+    var el=document.createElement(tag);
+    ['cen','rig','flush'].forEach(function(c){if(b.classList.contains(c))el.classList.add(c);});
+    while(b.firstChild)el.appendChild(b.firstChild);
+    if(b.parentNode)b.parentNode.replaceChild(el,b);
+  }
+  function applyOne(b,k){
+    if(!b)return;
+    if(k==='cen'||k==='rig'){
+      var on=!b.classList.contains(k);
+      b.classList.remove('cen');b.classList.remove('rig');
+      if(on){b.classList.add(k);b.classList.remove('flush');}
+    }else if(k==='flush'){
+      b.classList.toggle('flush');
+    }else if(k==='bold'){
+      var wasBold=isWholeBold(b);
+      unwrapBold(b);
+      if(!wasBold){
+        var st=document.createElement('strong');
+        while(b.firstChild)st.appendChild(b.firstChild);
+        b.appendChild(st);
+      }
+    }else if(k==='h1'||k==='p'){
+      tagAs(b,k==='h1'?'h1':'p');
+    }
+  }
+  function applyStyleMobile(k){
+    var range=pickRange();
+    if(!range){toast('请先在正文里长按选中要改的文字');return;}
+    var blocks=blocksOf(range).filter(function(b){return b&&doc.contains(b);});
+    if(!blocks.length){sRange=null;cRange=null;toast('请先在正文里长按选中要改的文字');return;}
+    for(var i=0;i<blocks.length;i++)applyOne(blocks[i],k);
+    try{var s=window.getSelection();s.removeAllRanges();s.addRange(range);}catch(e){}
+    var vd=$('viewDoc');
+    if(vd&&!vd.classList.contains('on'))switchTab('doc');
+    if(M.stats)M.stats();
+    if(M.extract)M.extract();
+    toast((TIP[k]||'已应用')+'（'+(blocks.length>1?(blocks.length+' 段'):'本段')+'）');
+  }
+  window.__mStyle=applyStyleMobile;
 
   /* ───────── 图片字节获取（用沙箱，绕开跨域） ───────── */
   function dataUrlToBlob(du){
