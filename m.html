@@ -267,6 +267,11 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
 @media(prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+/* ── 排版格式抽屉：全文更改按钮组 ── */
+.allbtns{display:flex;flex-wrap:wrap;gap:8px;padding:2px 0 12px}
+.abtn{height:38px;padding:0 14px;border:1px solid var(--line-3);border-radius:11px;background:#fff;
+  font-size:13px;font-weight:600;color:var(--text);white-space:nowrap}
+.abtn:active{color:var(--brand);border-color:rgba(90,92,240,.55);background:#f7f7ff}
 </style>
 </head>
 <body>
@@ -344,6 +349,16 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     <div class="sheet-row"><span class="k">字号</span><select id="fSize"></select></div>
     <div class="sheet-row"><span class="k">行距</span><input type="number" id="fLine" value="28" min="10" max="80" step="1"><span class="u">磅</span></div>
     <div class="sheet-row"><span class="k">首行缩进</span><input type="number" id="fIndent" value="2" min="0" max="6" step="0.5"><span class="u">字符</span></div>
+    <div class="sheet-row" style="border-top:1px solid var(--line-2);margin-top:4px;padding-top:10px"><span class="k2">全文更改</span></div>
+    <div class="allbtns" id="allBtns">
+      <button type="button" class="abtn" data-all="bold">全文加粗</button>
+      <button type="button" class="abtn" data-all="boldoff">取消加粗</button>
+      <button type="button" class="abtn" data-all="cen">全文居中</button>
+      <button type="button" class="abtn" data-all="left">全文左对齐</button>
+      <button type="button" class="abtn" data-all="flush">去掉缩进</button>
+      <button type="button" class="abtn" data-all="indent">恢复缩进</button>
+      <button type="button" class="abtn" data-all="p">统一为正文</button>
+    </div>
   </div>
 </div>
 
@@ -357,7 +372,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.7</b>
+      <b>版本 v2026-09-17.8</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -1220,28 +1235,59 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     }
     return any;
   }
-  function toggleBoldRange(range){
-    var wasAll=rangeAllBold(range);
-    var frag=range.extractContents();
-    unwrapIn(frag);
-    var first,last;
-    if(!wasAll){
-      var st=document.createElement('strong');
-      while(frag.firstChild)st.appendChild(frag.firstChild);
-      frag.appendChild(st);
-      first=last=st;
-    }else{
-      first=frag.firstChild;last=frag.lastChild;
+  // 按"字符区间"加粗：在每个文本节点内部单独处理，天然支持跨段落 / 跨图片
+  function toggleBoldChars(i0,i1){
+    if(!(i1>i0))return null;
+    var ns=textNodesIn(),acc=0,parts=[];
+    for(var i=0;i<ns.length;i++){
+      var v=ns[i].nodeValue,s=acc,e=acc+v.length;
+      var a=Math.max(s,i0),b=Math.min(e,i1);
+      if(a<b)parts.push({node:ns[i],a:a-s,b:b-s});
+      acc=e;
     }
-    if(!first||!last)return false;
-    range.insertNode(frag);
+    if(!parts.length)return null;
+    var allBold=parts.every(function(p){
+      var n=p.node.parentNode;
+      while(n&&n!==doc){ if(n.tagName==='STRONG'||n.tagName==='B')return true; n=n.parentNode; }
+      return false;
+    });
+    for(var k=parts.length-1;k>=0;k--){            // 倒序，避免偏移错乱
+      var p=parts[k];
+      var r=document.createRange();
+      try{ r.setStart(p.node,p.a); r.setEnd(p.node,p.b); }catch(e){ continue; }
+      var frag=r.extractContents();
+      unwrapIn(frag);
+      if(!allBold&&frag.childNodes.length){
+        var st=document.createElement('strong');
+        while(frag.firstChild)st.appendChild(frag.firstChild);
+        frag.appendChild(st);
+      }
+      r.insertNode(frag);
+    }
+    selectFrom(i0,i1-i0);                          // 重新选中，方便接着操作
+    return !allBold;
+  }
+  function endIndexFromRange(r){
     try{
-      var nr=document.createRange();
-      nr.setStartBefore(first);nr.setEndAfter(last);
-      var s=window.getSelection();s.removeAllRanges();s.addRange(nr);
-      sRange=nr.cloneRange();
-    }catch(e){}
-    return !wasAll;      // true=加粗，false=取消加粗
+      var n=r.endContainer,off=r.endOffset,ns=textNodesIn();
+      if(n.nodeType===3){
+        if(ns.indexOf(n)>=0)return charPosOf(n,off);
+        var end=0;
+        var w=document.createTreeWalker(doc,NodeFilter.SHOW_TEXT,null,false);
+        while(w.nextNode()){
+          var t=w.currentNode;
+          if(t===n)break;
+          if(ns.indexOf(t)>=0)end=charPosOf(t,t.nodeValue.length);
+        }
+        return end;
+      }
+      var w2=document.createTreeWalker(n,NodeFilter.SHOW_TEXT,null,false),lastEnd=null;
+      while(w2.nextNode()){
+        var t2=w2.currentNode;
+        if(ns.indexOf(t2)>=0)lastEnd=charPosOf(t2,t2.nodeValue.length);
+      }
+      return lastEnd!==null?lastEnd:totalChars();
+    }catch(e){ return totalChars(); }
   }
 
   function applyStyleMobile(k){
@@ -1250,7 +1296,10 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
 
     // 加粗：有选区就只加粗选中的文字；没有选区（只有光标）才整段处理
     if(k==='bold'&&!range.collapsed){
-      var on=toggleBoldRange(range);
+      var i0=startIndexFromRange(range), i1=endIndexFromRange(range);
+      if(i1<=i0){ i0=startIndexFromRange(range); i1=Math.min(totalChars(),i0+range.toString().length); }
+      var on=toggleBoldChars(i0,i1);
+      if(on===null){ toast('没有选中文字'); return; }
       if(M.stats)M.stats();
       toast(on?'已加粗选中的文字 ✅':'已取消选中文字的加粗');
       return;
@@ -1651,8 +1700,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     base=Math.max(0,Math.min(base||0,t));
     base=snapForward(base);                       // 起点不落在空格/换行上
     len=+(len||0);
-    var lim=blockEndIndex(base)-base;             // 不跨段落
-    if(len>lim)len=lim;
+    if(len>t-base)len=t-base;                     // 允许跨段落／越过图片
     var a=locate(base), b=locate(Math.min(base+len,t));
     if(!a||!b)return false;
     try{
@@ -1726,8 +1774,62 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     },400);
   },false);
 
+  /* ───────── 全文更改（在「排版格式」抽屉里） ───────── */
+  function allBlocks(){
+    return [].slice.call(doc.querySelectorAll('p,h1,h2,h3,h4,li,blockquote'))
+             .filter(function(b){ return doc.contains(b); });
+  }
+  function applyAll(k){
+    var bs=allBlocks();
+    if(!bs.length){ toast('正文里还没有内容'); return; }
+    if(k==='bold'){
+      var already=bs.every(function(b){ return isWholeBold(b); });
+      bs.forEach(function(b){
+        unwrapBold(b);
+        if(!already){
+          var st=document.createElement('strong');
+          while(b.firstChild)st.appendChild(b.firstChild);
+          b.appendChild(st);
+        }
+      });
+      toast(already?'已取消全文加粗':'已把全文加粗（'+bs.length+' 段）');
+    }else if(k==='boldoff'){
+      bs.forEach(function(b){ unwrapBold(b); });
+      toast('已取消全文加粗');
+    }else if(k==='cen'){
+      bs.forEach(function(b){ b.classList.remove('rig'); b.classList.add('cen'); });
+      toast('全文已居中（'+bs.length+' 段）');
+    }else if(k==='left'){
+      bs.forEach(function(b){ b.classList.remove('cen'); b.classList.remove('rig'); });
+      toast('全文已改为左对齐');
+    }else if(k==='flush'){
+      bs.forEach(function(b){ b.classList.add('flush'); });
+      toast('全文已取消首行缩进');
+    }else if(k==='indent'){
+      bs.forEach(function(b){ b.classList.remove('flush'); });
+      toast('全文已恢复首行缩进');
+    }else if(k==='p'){
+      bs.forEach(function(b){ tagAs(b,'p'); });
+      toast('全文已统一为正文段落');
+    }
+    if(M.stats)M.stats();
+    if(M.extract)M.extract();
+    syncSelRange();
+  }
+  (function(){
+    var box=document.getElementById('allBtns');
+    if(!box)return;
+    box.addEventListener('click',function(e){
+      var b=e.target.closest('[data-all]');
+      if(!b)return;
+      e.preventDefault();
+      applyAll(b.getAttribute('data-all'));
+    });
+  })();
+  window.__mAll=applyAll;
+
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.7';
+  var VER='2026-09-17.8';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
