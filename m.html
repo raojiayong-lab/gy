@@ -76,12 +76,13 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .view.on{display:flex}
 
 /* ───────── 正文页 ───────── */
-.doc-scroll{flex:1;min-height:0;min-width:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 18px;
+.doc-scroll{flex:1;min-height:0;min-width:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:12px 12px 18px;
   background:radial-gradient(700px 240px at 50% -120px,rgba(90,92,240,.1),transparent 72%),linear-gradient(180deg,#eaeef8,#e3e8f3)}
 .doc{
   --bfont:'仿宋_GB2312','FangSong','仿宋',serif;--bsize:16pt;--bline:28pt;--bindent:2;
-  width:100%;min-height:100%;padding:24px 17px 34px;background:#fff;border-radius:5px;outline:0;color:#000;
-  font-family:var(--bfont);
+  width:210mm;min-height:297mm;padding:37mm 26mm 35mm 28mm;background:#fff;outline:0;color:#000;
+  font-family:var(--bfont);margin:0 auto;
+  zoom:var(--mz,1);
   -webkit-user-select:text;user-select:text;
   box-shadow:0 0 0 1px rgba(15,23,41,.05),0 10px 26px -8px rgba(15,23,41,.14),0 30px 60px -34px rgba(15,23,41,.4);
   transition:box-shadow .22s}
@@ -102,6 +103,23 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .doc ::selection{background:#dcdeff}
 .doc-scroll::-webkit-scrollbar{width:6px}
 .doc-scroll::-webkit-scrollbar-thumb{border-radius:6px;background:rgba(116,128,158,.3)}
+
+/* A4 缩放条 */
+.zoombar{flex:none;display:flex;align-items:center;gap:9px;padding:6px 12px;background:#fff;border-top:1px solid var(--line)}
+.zoombar .zb-t{flex:none;font-size:10.5px;font-weight:800;color:var(--muted-2);letter-spacing:.08em}
+.zoombar input[type=range]{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:24px;background:transparent;margin:0}
+.zoombar input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:5px;
+  background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.zoombar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
+  background:#fff;border:2px solid var(--brand);box-shadow:0 2px 7px rgba(90,92,240,.4);margin-top:-8.5px}
+.zoombar input[type=range]::-moz-range-track{height:5px;border-radius:5px;background:var(--brand)}
+.zoombar input[type=range]::-moz-range-thumb{width:22px;height:22px;border:2px solid var(--brand);background:#fff;border-radius:50%}
+.zoombar .zb-v{flex:none;width:46px;text-align:right;font-size:11.5px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.zoombar .zb-fit{flex:none;height:28px;padding:0 11px;border:1px solid var(--line-3);border-radius:9px;background:#fff;
+  font-size:11.5px;font-weight:600;color:var(--muted)}
+.zoombar .zb-fit:active{color:var(--brand);border-color:rgba(90,92,240,.55)}
+.zoombar.hide{display:none}
 
 /* 快捷样式条 */
 .styles-bar{flex:none;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
@@ -229,7 +247,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
 .st-box b{color:var(--ink)}
 
 /* ───────── 提示 / 放大 ───────── */
-.toast{position:fixed;left:50%;bottom:calc(88px + var(--sab));z-index:99;display:flex;align-items:center;gap:8px;
+.toast{position:fixed;left:50%;bottom:calc(var(--chrome-h,140px) + 10px);z-index:99;display:flex;align-items:center;gap:8px;
   padding:12px 18px;border-radius:14px;background:rgba(15,20,34,.95);color:#fff;font-size:13px;font-weight:500;
   border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(10px);box-shadow:0 18px 44px rgba(15,23,41,.4);
   opacity:0;pointer-events:none;max-width:86vw;text-align:left;
@@ -268,6 +286,12 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     <section class="view on" id="viewDoc">
       <div class="doc-scroll">
         <div id="doc" class="doc" contenteditable="true" spellcheck="false" data-ph="微信文章：全选复制后长按这里粘贴…"></div>
+      </div>
+      <div class="zoombar" id="zoombar">
+        <span class="zb-t">A4</span>
+        <input type="range" id="zoomRange" min="25" max="150" step="1" value="50" aria-label="正文显示大小">
+        <span class="zb-v" id="zoomVal">50%</span>
+        <button class="zb-fit" type="button" id="zoomFit">适应</button>
       </div>
       <div class="styles-bar" id="stylesBar"><button type="button" class="sbtn" data-style="h1">标题</button><button type="button" class="sbtn" data-style="p">正文</button><button type="button" class="sbtn" data-style="bold">加粗</button><button type="button" class="sbtn" data-style="cen">居中</button><button type="button" class="sbtn" data-style="rig">右对齐</button><button type="button" class="sbtn" data-style="flush">去缩进</button></div>
     </section>
@@ -324,7 +348,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.5</b>
+      <b>版本 v2026-09-17.6</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -1394,6 +1418,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     var vd=$('viewDoc'),vi=$('viewImg');
     if(vd)vd.classList.toggle('on',v==='doc');
     if(vi)vi.classList.toggle('on',v==='img');
+    syncChromeH();
   }
   (function(){
     var tabs=document.querySelectorAll('.tab');
@@ -1433,6 +1458,54 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     });
   });
 
+  /* ───────── 提示条位置：始终浮在底部控件之上 ───────── */
+  function syncChromeH(){
+    var h=0;
+    [$('bottombar'),document.querySelector('.styles-bar'),$('zoombar')].forEach(function(e){
+      if(e&&e.offsetParent!==null)h+=e.offsetHeight;
+    });
+    try{document.documentElement.style.setProperty('--chrome-h',(h+12)+'px');}catch(e){}
+  }
+  syncChromeH();
+  window.addEventListener('resize',syncChromeH);
+  window.addEventListener('orientationchange',function(){setTimeout(syncChromeH,220);});
+
+  /* ───────── A4 缩放条：让正文显示跟 Word 版面一致，可拖动调节 ───────── */
+  var ZKEY='gypec_mzoom_v1';
+  var A4W=210/25.4*96;                                  // A4 宽 ≈ 793.7px
+  var zoomOk=('zoom' in document.documentElement.style); // 手机 Chrome / Safari 都支持
+  var zRange=$('zoomRange'), zVal=$('zoomVal'), zFit=$('zoomFit'), zBar=$('zoombar');
+
+  function clampZ(z){ return Math.max(25,Math.min(150,Math.round(z||0))); }
+  function setZoom(z,save){
+    z=clampZ(z);
+    if(zoomOk){ doc.style.zoom=z/100; }
+    else { doc.style.transformOrigin='top left'; doc.style.transform='scale('+(z/100)+')'; }
+    if(zRange)zRange.value=z;
+    if(zVal)zVal.textContent=z+'%';
+    if(save!==false){ try{localStorage.setItem(ZKEY,z);}catch(e){} }
+  }
+  function fitZoom(){
+    var sc=document.querySelector('.doc-scroll');
+    var avail=(sc?sc.clientWidth:window.innerWidth)-24;
+    return clampZ(avail/A4W*100);
+  }
+  if(!zoomOk&&zBar)zBar.classList.add('hide');
+  if(zRange){
+    zRange.addEventListener('input',function(){setZoom(+zRange.value);});
+    zRange.addEventListener('change',function(){setZoom(+zRange.value);});
+  }
+  if(zFit)zFit.addEventListener('click',function(){
+    setZoom(fitZoom(),false);
+    toast('已按屏宽显示完整 A4 版面（约 '+fitZoom()+'%）');
+  });
+  (function(){
+    var saved=null;
+    try{ saved=localStorage.getItem(ZKEY); }catch(e){}
+    if(saved===null||saved===undefined||saved===''){ setZoom(fitZoom(),false); }
+    else { setZoom(+saved||fitZoom()); }
+  })();
+
   /* ───────── 粘贴保险：这次粘进来的图片一律"始终显示"，避免粘了却看不见 ───────── */
   var pasteImgOnly=false;
   doc.addEventListener('paste',function(e){
@@ -1463,7 +1536,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   },false);
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.5';
+  var VER='2026-09-17.6';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
@@ -1474,6 +1547,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     return [
       '版本 '+VER,
       '剪贴板写入：'+clip,
+      '正文版面：A4（210×297mm，页边距与导出 Word 一致）｜当前显示 '+((zRange&&zRange.value)||'?')+'%',
       '正文图片：'+imgs.length+' 张（显示 '+vis+'｜自己贴 '+doc.querySelectorAll('img.usr').length+'｜文章原图 '+doc.querySelectorAll('img.ext').length+'）',
       '小窗列表：'+imgsOf().length+' 张',
       '当前选中：'+selTxt,
