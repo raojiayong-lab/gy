@@ -104,22 +104,27 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .doc-scroll::-webkit-scrollbar{width:6px}
 .doc-scroll::-webkit-scrollbar-thumb{border-radius:6px;background:rgba(116,128,158,.3)}
 
-/* A4 缩放条 */
-.zoombar{flex:none;display:flex;align-items:center;gap:9px;padding:6px 12px;background:#fff;border-top:1px solid var(--line)}
-.zoombar .zb-t{flex:none;font-size:10.5px;font-weight:800;color:var(--muted-2);letter-spacing:.08em}
-.zoombar input[type=range]{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:24px;background:transparent;margin:0}
-.zoombar input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:5px;
-  background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-.zoombar input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;
-  background:#fff;border:2px solid var(--brand);box-shadow:0 2px 7px rgba(90,92,240,.4);margin-top:-8.5px}
-.zoombar input[type=range]::-moz-range-track{height:5px;border-radius:5px;background:var(--brand)}
-.zoombar input[type=range]::-moz-range-thumb{width:22px;height:22px;border:2px solid var(--brand);background:#fff;border-radius:50%}
-.zoombar .zb-v{flex:none;width:46px;text-align:right;font-size:11.5px;font-weight:700;color:var(--ink);
+/* 主界面：选字条（拖动就选中一段文字，再用下面按钮加粗/居中…） */
+.selbar{flex:none;display:flex;align-items:center;gap:9px;padding:7px 12px;background:#fff;border-top:1px solid var(--line)}
+.selbar .sb-t{flex:none;font-size:10.5px;font-weight:800;color:var(--muted-2);letter-spacing:.08em}
+.selbar .sb-v{flex:none;width:56px;text-align:right;font-size:11.5px;font-weight:700;color:var(--ink);
   font-variant-numeric:tabular-nums}
-.zoombar .zb-fit{flex:none;height:28px;padding:0 11px;border:1px solid var(--line-3);border-radius:9px;background:#fff;
-  font-size:11.5px;font-weight:600;color:var(--muted)}
-.zoombar .zb-fit:active{color:var(--brand);border-color:rgba(90,92,240,.55)}
-.zoombar.hide{display:none}
+.slider{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:26px;background:transparent;margin:0;padding:0;border:0}
+.slider::-webkit-slider-runnable-track{height:6px;border-radius:6px;
+  background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+.slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;
+  background:#fff;border:2px solid var(--brand);box-shadow:0 2px 8px rgba(90,92,240,.45);margin-top:-9px}
+.slider::-moz-range-track{height:6px;border-radius:6px;background:var(--brand)}
+.slider::-moz-range-thumb{width:24px;height:24px;border:2px solid var(--brand);background:#fff;border-radius:50%}
+.selbar.hide{display:none}
+
+/* 排版格式抽屉里的「纸张大小」 */
+.sheet-row .zval{flex:none;width:48px;text-align:right;font-size:12.5px;font-weight:700;color:var(--ink);
+  font-variant-numeric:tabular-nums}
+.sheet-row .zfit{flex:none;height:36px;padding:0 12px;border:1px solid var(--line-3);border-radius:10px;background:#fff;
+  font-size:12px;font-weight:600;color:var(--muted)}
+.sheet-row .zfit:active{color:var(--brand);border-color:rgba(90,92,240,.55)}
+.sheet-row .k2{flex:none;width:60px;font-size:13px;color:var(--muted)}
 
 /* 快捷样式条 */
 .styles-bar{flex:none;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
@@ -227,7 +232,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   border-radius:11px;background:#fff;font-size:13.5px;font-weight:600;
   background-image:linear-gradient(45deg,transparent 50%,#8b96ab 50%),linear-gradient(135deg,#8b96ab 50%,transparent 50%);
   background-position:calc(100% - 17px) 18px,calc(100% - 12px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
-.sheet-row input{flex:1;height:42px;padding:0;border:1px solid var(--line-3);border-radius:11px;background:#fff;
+.sheet-row input[type=number]{flex:1;height:42px;padding:0;border:1px solid var(--line-3);border-radius:11px;background:#fff;
   text-align:center;font-size:14px;font-weight:700}
 .sheet-row select:focus,.sheet-row input:focus{outline:0;border-color:var(--brand);box-shadow:var(--ring)}
 .sheet-row input::-webkit-outer-spin-button,.sheet-row input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -287,11 +292,10 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <div class="doc-scroll">
         <div id="doc" class="doc" contenteditable="true" spellcheck="false" data-ph="微信文章：全选复制后长按这里粘贴…"></div>
       </div>
-      <div class="zoombar" id="zoombar">
-        <span class="zb-t">A4</span>
-        <input type="range" id="zoomRange" min="25" max="150" step="1" value="50" aria-label="正文显示大小">
-        <span class="zb-v" id="zoomVal">50%</span>
-        <button class="zb-fit" type="button" id="zoomFit">适应</button>
+      <div class="selbar" id="selbar">
+        <span class="sb-t">选字</span>
+        <input type="range" class="slider" id="selRange" min="0" max="100" step="1" value="0" aria-label="拖动选中文字">
+        <span class="sb-v" id="selVal">0 字</span>
       </div>
       <div class="styles-bar" id="stylesBar"><button type="button" class="sbtn" data-style="h1">标题</button><button type="button" class="sbtn" data-style="p">正文</button><button type="button" class="sbtn" data-style="bold">加粗</button><button type="button" class="sbtn" data-style="cen">居中</button><button type="button" class="sbtn" data-style="rig">右对齐</button><button type="button" class="sbtn" data-style="flush">去缩进</button></div>
     </section>
@@ -331,6 +335,11 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   <div class="sheet-mask" data-close></div>
   <div class="sheet-panel">
     <div class="sheet-h"><b>排版格式</b><button class="done" data-close>完成</button></div>
+    <div class="sheet-row"><span class="k2">纸张大小</span>
+      <input type="range" class="slider" id="zoomRange" min="25" max="150" step="1" value="50" aria-label="纸张显示大小">
+      <span class="zval" id="zoomVal">46%</span>
+      <button class="zfit" type="button" id="zoomFit">适应</button>
+    </div>
     <div class="sheet-row"><span class="k">字体</span><select id="fFont"></select></div>
     <div class="sheet-row"><span class="k">字号</span><select id="fSize"></select></div>
     <div class="sheet-row"><span class="k">行距</span><input type="number" id="fLine" value="28" min="10" max="80" step="1"><span class="u">磅</span></div>
@@ -348,11 +357,13 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.6</b>
+      <b>版本 v2026-09-17.7</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
-      <div class="is-hint" style="line-height:1.9">手机用法：微信文章 →「…」复制链接后在浏览器打开，全选正文和图片复制 → 回到本页长按粘贴 → <b>长按选中文字后，用下面那排按钮设标题 / 加粗 / 居中</b>；切到「图片」页把要用的图插入正文或下载。</div>
+      <div class="is-hint" style="line-height:1.9">手机用法：微信文章 →「…」复制链接后在浏览器打开，全选正文和图片复制 → 回到本页长按粘贴。<br>
+        <b>要改某几个字的样式</b>：先在正文里点一下（把光标放到要开始的位置），再拖下面那根「<b>选字</b>」进度条选好字数，然后点「加粗 / 居中…」即可生效。<br>
+        <b>纸张大小</b>在右上 ⚙「排版格式」里拖；切到「图片」页可把图插入正文或下载。</div>
     </div>
   </div>
 </div>
@@ -1267,6 +1278,24 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       curInDoc:(s&&s.rangeCount)?inDoc(s.getRangeAt(0).commonAncestorContainer):null
     };
   };
+  window.__mSelDbg=function(n){
+    var ns=textNodesIn(),t=totalChars(),base=caretIndex();
+    var sb=(base!==undefined?base:caretIndex());
+    var b2=snapForward(sb), lim=blockEndIndex(b2)-b2;
+    return {
+      nodes:ns.map(function(x,i){return i+':'+JSON.stringify(x.nodeValue.slice(0,12));}),
+      totalChars:t, caretIndex:sb, base:b2, lim:lim,
+      baseNode:b2, endNode:Math.min(b2+(n||0),b2+lim),
+      checked:(function(){
+        var a=locate(b2),b3=locate(Math.min(b2+(n||0),b2+lim));
+        if(!a||!b3)return 'locate-fail';
+        try{
+          var r=document.createRange();r.setStart(a.node,a.offset);r.setEnd(b3.node,b3.offset);
+          return JSON.stringify(String(r.toString()).slice(0,20));
+        }catch(e){return 'ERR '+e.message;}
+      })()
+    };
+  };
   window.__mBlocks=function(){
     var r=pickRange();
     if(!r)return 'NO-RANGE';
@@ -1461,7 +1490,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   /* ───────── 提示条位置：始终浮在底部控件之上 ───────── */
   function syncChromeH(){
     var h=0;
-    [$('bottombar'),document.querySelector('.styles-bar'),$('zoombar')].forEach(function(e){
+    [$('bottombar'),document.querySelector('.styles-bar'),$('selbar')].forEach(function(e){
       if(e&&e.offsetParent!==null)h+=e.offsetHeight;
     });
     try{document.documentElement.style.setProperty('--chrome-h',(h+12)+'px');}catch(e){}
@@ -1470,11 +1499,11 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.addEventListener('resize',syncChromeH);
   window.addEventListener('orientationchange',function(){setTimeout(syncChromeH,220);});
 
-  /* ───────── A4 缩放条：让正文显示跟 Word 版面一致，可拖动调节 ───────── */
+  /* ───────── 纸张大小（放在「排版格式」抽屉里） ───────── */
   var ZKEY='gypec_mzoom_v1';
   var A4W=210/25.4*96;                                  // A4 宽 ≈ 793.7px
   var zoomOk=('zoom' in document.documentElement.style); // 手机 Chrome / Safari 都支持
-  var zRange=$('zoomRange'), zVal=$('zoomVal'), zFit=$('zoomFit'), zBar=$('zoombar');
+  var zRange=$('zoomRange'), zVal=$('zoomVal'), zFit=$('zoomFit');
 
   function clampZ(z){ return Math.max(25,Math.min(150,Math.round(z||0))); }
   function setZoom(z,save){
@@ -1490,10 +1519,9 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     var avail=(sc?sc.clientWidth:window.innerWidth)-24;
     return clampZ(avail/A4W*100);
   }
-  if(!zoomOk&&zBar)zBar.classList.add('hide');
   if(zRange){
-    zRange.addEventListener('input',function(){setZoom(+zRange.value);});
-    zRange.addEventListener('change',function(){setZoom(+zRange.value);});
+    zRange.addEventListener('input',function(){setZoom(+zRange.value);syncChromeH();});
+    zRange.addEventListener('change',function(){setZoom(+zRange.value);syncChromeH();});
   }
   if(zFit)zFit.addEventListener('click',function(){
     setZoom(fitZoom(),false);
@@ -1505,6 +1533,167 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     if(saved===null||saved===undefined||saved===''){ setZoom(fitZoom(),false); }
     else { setZoom(+saved||fitZoom()); }
   })();
+
+  /* ───────── 选字条：拖动就选中正文里的一段文字，再用下面按钮加粗/居中 ───────── */
+  var selRange=$('selRange'), selVal=$('selVal'), selBar=$('selbar'), selBase=null;
+
+  // 只取"有实际文字"的文本节点：跳过段落之间那些纯换行/空白节点，
+  // 否则起点会落在换行上，跨段落取内容会把结构弄乱。
+  function textNodesIn(){
+    var out=[], w=document.createTreeWalker(doc,NodeFilter.SHOW_TEXT,null,false);
+    while(w.nextNode()){
+      var n=w.currentNode;
+      if(n.nodeValue&&n.nodeValue.replace(/\s+/g,''))out.push(n);
+    }
+    return out;
+  }
+  function totalChars(){
+    var ns=textNodesIn(),t=0;
+    for(var i=0;i<ns.length;i++)t+=ns[i].nodeValue.length;
+    return t;
+  }
+  function charPosOf(node,offset){
+    var ns=textNodesIn(),acc=0;
+    for(var i=0;i<ns.length;i++){
+      if(ns[i]===node)return acc+offset;
+      acc+=ns[i].nodeValue.length;
+    }
+    return acc;
+  }
+  function locate(idx){
+    var ns=textNodesIn(),acc=0;
+    if(!ns.length)return null;
+    for(var i=0;i<ns.length;i++){
+      var L=ns[i].nodeValue.length;
+      // 用严格小于：idx 正好等于两个节点的边界时，归到"后一个节点的开头"，
+      // 否则会被算成"前一个节点的末尾"（跨到上一段去，选区就成空的了）
+      if(idx<acc+L)return {node:ns[i],offset:Math.max(0,Math.min(L,idx-acc))};
+      acc+=L;
+    }
+    var last=ns[ns.length-1];
+    return {node:last,offset:last.nodeValue.length};
+  }
+  // 落在"空白节点"上时，往后找第一个有效文本节点
+  function nextValidAfter(node){
+    var ns=textNodesIn();
+    if(!ns.length)return totalChars();
+    var w=document.createTreeWalker(doc,NodeFilter.SHOW_TEXT,null,false),hit=false;
+    while(w.nextNode()){
+      var t=w.currentNode;
+      if(t===node){hit=true;continue;}
+      if(hit&&ns.indexOf(t)>=0)return charPosOf(t,0);
+    }
+    return totalChars();
+  }
+  function startIndexFromRange(r){
+    try{
+      var n=r.startContainer,off=r.startOffset,ns=textNodesIn();
+      if(n.nodeType===3){
+        if(ns.indexOf(n)>=0)return charPosOf(n,off);
+        return nextValidAfter(n);
+      }
+      var w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT,null,false);
+      while(w.nextNode()){
+        var t=w.currentNode;
+        if(ns.indexOf(t)>=0)return charPosOf(t,0);
+      }
+      return totalChars();
+    }catch(e){ return 0; }
+  }
+  function caretIndex(){
+    var s=window.getSelection();
+    if(s&&s.rangeCount){
+      var r=s.getRangeAt(0);
+      if(inDoc(r.commonAncestorContainer))return startIndexFromRange(r);
+    }
+    if(cRange&&rangeAlive(cRange))return startIndexFromRange(cRange);
+    return 0;
+  }
+  // 起点若是空白字符，往后跳到第一个"真"字符
+  function snapForward(idx){
+    var ns=textNodesIn(),acc=0;
+    for(var i=0;i<ns.length;i++){
+      var v=ns[i].nodeValue;
+      for(var k=0;k<v.length;k++){
+        var pos=acc+k;
+        if(pos>=idx&&!/\s/.test(v.charAt(k)))return pos;
+      }
+      acc+=v.length;
+    }
+    return idx;
+  }
+  function indexAfter(node){
+    var ns=textNodesIn(),acc=0;
+    for(var i=0;i<ns.length;i++){
+      if(ns[i]===node)return acc+ns[i].nodeValue.length;
+      acc+=ns[i].nodeValue.length;
+    }
+    return totalChars();
+  }
+  // 起点所在那一段的结束位置（选字不跨段，防止跨段取内容破坏结构）
+  function blockEndIndex(base){
+    var a=locate(base);
+    if(!a)return totalChars();
+    var b=a.node.parentNode;
+    while(b&&b!==doc&&!/^(P|H1|H2|H3|H4|LI|BLOCKQUOTE|DIV)$/.test(b.tagName))b=b.parentNode;
+    if(!b||b===doc)return totalChars();
+    var ns=textNodesIn(),end=0;
+    for(var i=0;i<ns.length;i++){
+      if(b.contains(ns[i])){
+        var e=indexAfter(ns[i]);
+        if(e>end)end=e;
+      }
+    }
+    return end||totalChars();
+  }
+  function selectFrom(base,len){
+    var t=totalChars(); if(!t)return false;
+    base=Math.max(0,Math.min(base||0,t));
+    base=snapForward(base);                       // 起点不落在空格/换行上
+    len=+(len||0);
+    var lim=blockEndIndex(base)-base;             // 不跨段落
+    if(len>lim)len=lim;
+    var a=locate(base), b=locate(Math.min(base+len,t));
+    if(!a||!b)return false;
+    try{
+      var r=document.createRange();
+      r.setStart(a.node,a.offset); r.setEnd(b.node,b.offset);
+      var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      sRange=r.cloneRange(); cRange=r.cloneRange();
+      return true;
+    }catch(e){ return false; }
+  }
+  function syncSelRange(){
+    var t=totalChars();
+    if(!selRange)return;
+    selRange.max=t;
+    if(+selRange.value>t){ selRange.value=t; if(selVal)selVal.textContent=t+' 字'; }
+    if(selVal&&+selRange.value===0)selVal.textContent='0 字';
+  }
+  if(selRange){
+    // 手指刚碰到滑块时，把"起点"定在当前光标/选区开头（拖动过程中不再变）
+    ['touchstart','pointerdown','mousedown'].forEach(function(ev){
+      selRange.addEventListener(ev,function(){
+        selBase=caretIndex();
+        syncSelRange();
+      },true);
+    });
+    selRange.addEventListener('input',function(){
+      if(selBase===null)selBase=caretIndex();
+      var n=+selRange.value;
+      selectFrom(selBase,n);
+      if(selVal)selVal.textContent=n+' 字';
+    });
+    selRange.addEventListener('change',function(){
+      var n=+selRange.value;
+      selBase=null;                       // 下次拖动重新取起点
+      if(n>0)toast('已选中 '+n+' 个字，现在点下面的按钮（加粗 / 居中…）即可生效');
+    });
+    syncSelRange();
+  }
+  window.addEventListener('resize',syncSelRange);
+  doc.addEventListener('input',syncSelRange);
+  setTimeout(syncSelRange,600);
 
   /* ───────── 粘贴保险：这次粘进来的图片一律"始终显示"，避免粘了却看不见 ───────── */
   var pasteImgOnly=false;
@@ -1522,6 +1711,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     setTimeout(function(){
       var added=[].slice.call(doc.querySelectorAll('img:not([data-p])'));
       [].slice.call(doc.querySelectorAll('img[data-p]')).forEach(function(im){im.removeAttribute('data-p');});
+      syncSelRange();
       if(!added.length)return;
       if(pasteImgOnly){
         added.forEach(function(im){
@@ -1529,14 +1719,15 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
         });
         if(M.extract)M.extract();
         if(M.stats)M.stats();
-        if(pasteImgOnly)M.toast&&M.toast('图片已放进正文 ✅');
+        syncSelRange();
+        M.toast&&M.toast('图片已放进正文 ✅');
       }
       added.forEach(function(im){im.removeAttribute('data-p');});
     },400);
   },false);
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.6';
+  var VER='2026-09-17.7';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
@@ -1551,6 +1742,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       '正文图片：'+imgs.length+' 张（显示 '+vis+'｜自己贴 '+doc.querySelectorAll('img.usr').length+'｜文章原图 '+doc.querySelectorAll('img.ext').length+'）',
       '小窗列表：'+imgsOf().length+' 张',
       '当前选中：'+selTxt,
+      '选字条：共 '+totalChars()+' 字，当前选中 '+((selRange&&selRange.value)||'0')+' 字',
       '屏幕：'+window.innerWidth+'×'+window.innerHeight+'（有横向溢出：'+(document.querySelector('.doc-scroll').scrollWidth>document.querySelector('.doc-scroll').clientWidth+1?'是':'否')+'）'
     ].join('\n');
   }
