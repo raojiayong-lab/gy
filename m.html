@@ -996,6 +996,8 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 
   /* ───────── 选区记忆（手机点按钮会把选区清掉，必须自己记住） ───────── */
   function remember(){
+    if(sRange&&!rangeAlive(sRange))sRange=null;
+    if(cRange&&!rangeAlive(cRange))cRange=null;
     var s=window.getSelection();
     if(!s||!s.rangeCount)return;
     var r=s.getRangeAt(0);
@@ -1003,14 +1005,22 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     cRange=r.cloneRange();
     if(!r.collapsed)sRange=r.cloneRange();
   }
+  function rangeAlive(r){
+    try{ return !!r&&doc.contains(r.startContainer)&&doc.contains(r.endContainer); }catch(e){ return false; }
+  }
   function pickRange(){
-    if(sRange)return sRange;
     var s=window.getSelection();
     if(s&&s.rangeCount){
-      var r=s.getRangeAt(0);
-      if(inDoc(r.commonAncestorContainer))return r;
+      var cur=s.getRangeAt(0);
+      if(inDoc(cur.commonAncestorContainer)&&!cur.collapsed)return cur;   // 当前就有选区 → 用最新的那个
     }
-    return cRange;
+    if(rangeAlive(sRange))return sRange;                                  // 选区被系统清掉了 → 用记住的
+    if(s&&s.rangeCount){
+      var c=s.getRangeAt(0);
+      if(inDoc(c.commonAncestorContainer))return c;                       // 再退一步：用光标所在段
+    }
+    if(rangeAlive(cRange))return cRange;
+    return null;
   }
   function restoreSel(){
     var r=pickRange();
@@ -1023,7 +1033,18 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   document.addEventListener('selectionchange',remember);
   doc.addEventListener('keyup',remember);
   doc.addEventListener('mouseup',remember);
+  doc.addEventListener('selectstart',function(){setTimeout(remember,0);});
+  doc.addEventListener('contextmenu',function(){setTimeout(remember,0);});   // 手机长按会触发它
   doc.addEventListener('blur',function(){setTimeout(remember,0);});
+
+  // 最关键的一步：手指刚碰到样式按钮时再抓一次选区——这一刻选区一定还在
+  (function(){
+    var bar=$('stylesBar');
+    if(!bar)return;
+    ['touchstart','pointerdown','mousedown'].forEach(function(ev){
+      bar.addEventListener(ev,function(){remember();},true);
+    });
+  })();
   // 手指点在正文里 → 若是"放下光标"（折叠），就清掉旧的选区记忆，避免误套用到上一次选的段落
   doc.addEventListener('touchend',function(){
     setTimeout(function(){
@@ -1123,9 +1144,71 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       tagAs(b,k==='h1'?'h1':'p');
     }
   }
+
+  /* ───────── 加粗：只作用于"选中的那部分文字" ───────── */
+  function unwrapIn(root){
+    [].slice.call(root.querySelectorAll('strong,b')).forEach(function(e){
+      if(!e.parentNode)return;
+      var f=document.createDocumentFragment();
+      while(e.firstChild)f.appendChild(e.firstChild);
+      e.parentNode.replaceChild(f,e);
+    });
+  }
+  function isBoldNode(n){
+    if(!n||n.nodeType!==1)return false;
+    var t=n.tagName;
+    return t==='STRONG'||t==='B';
+  }
+  function rangeAllBold(range){
+    var frag=range.cloneContents();
+    var w=document.createTreeWalker(frag,NodeFilter.SHOW_TEXT,null,false);
+    var any=false;
+    while(w.nextNode()){
+      var t=w.currentNode;
+      if(!t.nodeValue||!t.nodeValue.replace(/\s+/g,''))continue;
+      any=true;
+      var n=t.parentNode,ok=false;
+      while(n&&n!==frag){ if(isBoldNode(n)){ok=true;break;} n=n.parentNode; }
+      if(!ok)return false;
+    }
+    return any;
+  }
+  function toggleBoldRange(range){
+    var wasAll=rangeAllBold(range);
+    var frag=range.extractContents();
+    unwrapIn(frag);
+    var first,last;
+    if(!wasAll){
+      var st=document.createElement('strong');
+      while(frag.firstChild)st.appendChild(frag.firstChild);
+      frag.appendChild(st);
+      first=last=st;
+    }else{
+      first=frag.firstChild;last=frag.lastChild;
+    }
+    if(!first||!last)return false;
+    range.insertNode(frag);
+    try{
+      var nr=document.createRange();
+      nr.setStartBefore(first);nr.setEndAfter(last);
+      var s=window.getSelection();s.removeAllRanges();s.addRange(nr);
+      sRange=nr.cloneRange();
+    }catch(e){}
+    return !wasAll;      // true=加粗，false=取消加粗
+  }
+
   function applyStyleMobile(k){
     var range=pickRange();
     if(!range){toast('请先在正文里长按选中要改的文字');return;}
+
+    // 加粗：有选区就只加粗选中的文字；没有选区（只有光标）才整段处理
+    if(k==='bold'&&!range.collapsed){
+      var on=toggleBoldRange(range);
+      if(M.stats)M.stats();
+      toast(on?'已加粗选中的文字 ✅':'已取消选中文字的加粗');
+      return;
+    }
+
     var blocks=blocksOf(range).filter(function(b){return b&&doc.contains(b);});
     if(!blocks.length){sRange=null;cRange=null;toast('请先在正文里长按选中要改的文字');return;}
     for(var i=0;i<blocks.length;i++)applyOne(blocks[i],k);
@@ -1134,9 +1217,25 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     if(vd&&!vd.classList.contains('on'))switchTab('doc');
     if(M.stats)M.stats();
     if(M.extract)M.extract();
+    if(k==='bold'){toast('已整段加粗（先选中部分文字，就能只加粗那部分）');return;}
     toast((TIP[k]||'已应用')+'（'+(blocks.length>1?(blocks.length+' 段'):'本段')+'）');
   }
   window.__mStyle=applyStyleMobile;
+  // 诊断钩子（不参与功能，出问题时用来定位）
+  window.__mSel=function(){
+    var s=window.getSelection();
+    return {
+      hasS:!!sRange,hasC:!!cRange,
+      sAlive:rangeAlive(sRange),cAlive:rangeAlive(cRange),
+      curRange:s&&s.rangeCount?s.getRangeAt(0).collapsed:null,
+      curInDoc:(s&&s.rangeCount)?inDoc(s.getRangeAt(0).commonAncestorContainer):null
+    };
+  };
+  window.__mBlocks=function(){
+    var r=pickRange();
+    if(!r)return 'NO-RANGE';
+    return blocksOf(r).map(function(b){return b.tagName+(b.className?'['+b.className+']':'');});
+  };
 
   /* ───────── 图片字节获取（用沙箱，绕开跨域） ───────── */
   function dataUrlToBlob(du){
