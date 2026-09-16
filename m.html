@@ -222,6 +222,11 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nav-item:active{color:var(--brand)}
 .nav-item:active svg{color:var(--brand)}
+button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--line-2);
+  text-align:left;font:inherit;font-size:14px;font-weight:600;color:var(--text);padding:0}
+.st-box{margin:12px 0 2px;padding:11px 13px;border-radius:12px;background:#f6f8fd;border:1px solid var(--line-2);
+  font-size:11.5px;line-height:1.85;color:var(--muted);white-space:pre-wrap;word-break:break-word}
+.st-box b{color:var(--ink)}
 
 /* ───────── 提示 / 放大 ───────── */
 .toast{position:fixed;left:50%;bottom:calc(88px + var(--sab));z-index:99;display:flex;align-items:center;gap:8px;
@@ -316,6 +321,11 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
     <div class="nav-list">
       <a class="nav-item" href="https://portal.gypec.edu.cn/main" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M18 14v4.5A2.5 2.5 0 0 1 15.5 21H6A2.5 2.5 0 0 1 3.5 18.5V9A2.5 2.5 0 0 1 6 6.5h4.5"/></svg>新闻管理<span class="sub">portal.gypec.edu.cn</span></a>
       <a class="nav-item" href="https://www.gypec.edu.cn/" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15.2 15.2 0 0 1 0 18 15.2 15.2 0 0 1 0-18z"/></svg>学校官网<span class="sub">www.gypec.edu.cn</span></a>
+      <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
+    </div>
+    <div class="st-box" id="selfTest">
+      <b>版本 v2026-09-17.5</b>
+      如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
       <div class="is-hint" style="line-height:1.9">手机用法：微信文章 →「…」复制链接后在浏览器打开，全选正文和图片复制 → 回到本页长按粘贴 → <b>长按选中文字后，用下面那排按钮设标题 / 加粗 / 居中</b>；切到「图片」页把要用的图插入正文或下载。</div>
@@ -360,8 +370,10 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
   function waitImages(root){return Promise.all([...root.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;}))).catch(()=>{});}
   function insertHTML(html){
     doc.focus();
+    const __sig=()=>doc.querySelectorAll('*').length+'|'+doc.textContent.length+'|'+doc.querySelectorAll('img').length;
+    const __b4=__sig();
     let ok=false;try{ok=document.execCommand('insertHTML',false,html);}catch(e){}
-    if(ok)return;
+    if(__sig()!==__b4)return;   // 以「DOM 真的变了」为准，不信 execCommand 的返回值
     const sel=window.getSelection();
     const box=document.createElement('div');box.innerHTML=html;
     const frag=document.createDocumentFragment();while(box.firstChild)frag.appendChild(box.firstChild);
@@ -1420,6 +1432,61 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
       if(M.toast&&this.options&&this.options[this.selectedIndex])M.toast('已套用：'+this.options[this.selectedIndex].text);
     });
   });
+
+  /* ───────── 粘贴保险：这次粘进来的图片一律"始终显示"，避免粘了却看不见 ───────── */
+  var pasteImgOnly=false;
+  doc.addEventListener('paste',function(e){
+    var cd=e.clipboardData; if(!cd){pasteImgOnly=false;return;}
+    var txt='',html='',nf=0;
+    try{txt=(cd.getData('text/plain')||'').trim();}catch(x){}
+    try{html=cd.getData('text/html')||'';}catch(x){}
+    try{nf=[].slice.call(cd.items||[]).filter(function(x){return x.kind==='file';}).length;}catch(x){}
+    // 只有"几乎纯图片"的粘贴才强制显示；整篇文章照旧（文章原图只进小窗）
+    pasteImgOnly=(nf>0&&!txt)||(/<img[\s>]/i.test(html)&&!txt);
+    [].slice.call(doc.querySelectorAll('img')).forEach(function(im){im.setAttribute('data-p','1');});
+  },true);
+  doc.addEventListener('paste',function(){
+    setTimeout(function(){
+      var added=[].slice.call(doc.querySelectorAll('img:not([data-p])'));
+      [].slice.call(doc.querySelectorAll('img[data-p]')).forEach(function(im){im.removeAttribute('data-p');});
+      if(!added.length)return;
+      if(pasteImgOnly){
+        added.forEach(function(im){
+          if(!im.classList.contains('usr')){im.classList.remove('ext','skip');im.classList.add('usr');}
+        });
+        if(M.extract)M.extract();
+        if(M.stats)M.stats();
+        if(pasteImgOnly)M.toast&&M.toast('图片已放进正文 ✅');
+      }
+      added.forEach(function(im){im.removeAttribute('data-p');});
+    },400);
+  },false);
+
+  /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
+  var VER='2026-09-17.5';
+  function runSelfTest(){
+    var imgs=[].slice.call(doc.querySelectorAll('img'));
+    var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
+    var clip=(navigator.clipboard&&window.ClipboardItem&&window.isSecureContext)?'可用':'不可用';
+    var sel=window.getSelection();
+    var selTxt='无';
+    try{ if(sel&&sel.rangeCount&&!sel.getRangeAt(0).collapsed) selTxt=String(sel.toString()).slice(0,12); }catch(x){}
+    return [
+      '版本 '+VER,
+      '剪贴板写入：'+clip,
+      '正文图片：'+imgs.length+' 张（显示 '+vis+'｜自己贴 '+doc.querySelectorAll('img.usr').length+'｜文章原图 '+doc.querySelectorAll('img.ext').length+'）',
+      '小窗列表：'+imgsOf().length+' 张',
+      '当前选中：'+selTxt,
+      '屏幕：'+window.innerWidth+'×'+window.innerHeight+'（有横向溢出：'+(document.querySelector('.doc-scroll').scrollWidth>document.querySelector('.doc-scroll').clientWidth+1?'是':'否')+'）'
+    ].join('\n');
+  }
+  var stBtn=$('selfTestBtn'), stBox=$('selfTest');
+  if(stBtn&&stBox){
+    stBtn.addEventListener('click',function(){
+      stBox.textContent=runSelfTest();
+    });
+  }
+  window.__mSelf=runSelfTest;
 
   inject();
 })();</script>
