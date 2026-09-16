@@ -2,7 +2,8 @@
 
 单文件、纯前端、零依赖的网页工具：把微信公众号图文粘进来，自动提取图片、按公文格式排版，再一键复制到公众号或导出 Word。
 
-**在线使用：** https://raojiayong-lab.github.io/gypec-layout-tool/
+**电脑版：** https://raojiayong-lab.github.io/gypec-layout-tool/
+**手机版：** https://raojiayong-lab.github.io/gypec-layout-tool/m.html  （单列布局 · 正文/图片分页切换 · 底部固定操作栏 · 图片可一键插入正文）
 
 ## 功能
 
@@ -20,7 +21,8 @@
 仓库根目录只需一个 `index.html`（自包含，校标已内嵌 base64），GitHub Pages 从 `main` 分支根目录发布。
 
 ```
-index.html    # 唯一需要部署的文件
+index.html    # 电脑版（唯一必需文件，自包含）
+m.html        # 手机版（同样自包含，手机浏览器打开）
 README.md     # 本说明
 ```
 
