@@ -185,7 +185,7 @@ button,a{-webkit-tap-highlight-color:transparent}
     0 0 0 4px rgba(90,92,240,.12),
     0 12px 28px -8px rgba(15,23,41,.14),
     0 40px 80px -40px rgba(15,23,41,.4)}
-.doc:empty:before{content:""}
+.doc:empty:before{content:attr(data-ph);color:#aeb7c8;pointer-events:none}
 .doc p,.doc li,.doc blockquote,.doc h2,.doc h3,.doc h4{
   font-family:var(--bfont);font-size:var(--bsize);line-height:var(--bline);margin:0;
   text-indent:calc(var(--bindent) * 1em);color:#000}
@@ -311,18 +311,6 @@ button,a{-webkit-tap-highlight-color:transparent}
   transform:scale(.96);transition:transform .3s var(--ease)}
 .viewer.on img{transform:scale(1)}
 
-/* 空状态引导卡 */
-.empty-guide{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;color:var(--muted-2);
-  pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
-.empty-guide.on{opacity:1;transform:none}
-.empty-guide .eg-ic{width:76px;height:76px;border-radius:24px;display:flex;align-items:center;justify-content:center;
-  background:linear-gradient(135deg,#fff,#eef1fb);border:1px solid var(--line);box-shadow:var(--sh-2);color:var(--brand)}
-.empty-guide .eg-ic svg{width:40px;height:40px}
-.empty-guide .eg-t{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.2px}
-.empty-guide .eg-s{font-size:12.5px;line-height:1.95;max-width:340px}
-.empty-guide .eg-s b{color:var(--brand);font-weight:700}
-
 @media(max-width:1140px){
   .topbar{gap:12px;padding:8px 16px}
   .brand{gap:10px}
@@ -424,11 +412,6 @@ button,a{-webkit-tap-highlight-color:transparent}
       <div class="phead"><span class="ttl"><i class="pdot"></i>大窗 · 编辑 / 预览</span><span class="pill" id="textStats">0 字</span></div>
       <div class="doc-scroll">
         <div id="doc" class="doc" contenteditable="true" spellcheck="false" data-ph="把微信 / 网页 / Word 的正文（含图片）直接粘贴到这里…"></div>
-        <div class="empty-guide" id="emptyGuide">
-          <div class="eg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg></div>
-          <div class="eg-t">把文章粘贴到这里开始排版</div>
-          <div class="eg-s">支持 <b>微信 / 网页 / Word</b> 正文，连同图片一并粘贴即可<br>粘贴后自动识别图片、套用公文格式（仿宋 · 三号 · 28 磅 · 首行缩进 2 字）</div>
-        </div>
       </div>
     </section>
 
@@ -1113,7 +1096,7 @@ button,a{-webkit-tap-highlight-color:transparent}
       }
     },130);
   });
-  doc.addEventListener('input',()=>{stats();toggleEmpty();});
+  doc.addEventListener('input',stats);
   doc.addEventListener('dragover',e=>{e.preventDefault();try{e.dataTransfer.dropEffect='copy';}catch(err){}});
   doc.addEventListener('drop',e=>{
     e.preventDefault();
@@ -1127,12 +1110,6 @@ button,a{-webkit-tap-highlight-color:transparent}
   });
 
   /* ── 初始化 ── */
-  function toggleEmpty(){
-    const g=$('emptyGuide');if(!g)return;
-    const empty=!doc.textContent.trim() && !doc.querySelector('img');
-    g.classList.toggle('on',empty);
-  }
-  toggleEmpty();
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
   document.querySelectorAll('.sbtn').forEach(b=>{b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>applyStyle(b.dataset.style));});
@@ -1140,7 +1117,7 @@ button,a{-webkit-tap-highlight-color:transparent}
   $('formatBtn').onclick=formatDoc;
   $('copyBtn').onclick=copyRich;
   $('wordBtn').onclick=exportWord;
-  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toggleEmpty();toast('已清空');};
+  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toast('已清空');};
   const msEl=$('minSide');
   if(msEl){
     msEl.value=minSide;
