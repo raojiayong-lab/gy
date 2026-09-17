@@ -91,7 +91,7 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .doc.enter{animation:paperIn .45s var(--ease)}
 @keyframes paperIn{from{opacity:.45;transform:translateY(6px)}to{opacity:1;transform:none}}
 .doc:focus{box-shadow:0 0 0 1px rgba(90,92,240,.25),0 0 0 4px rgba(90,92,240,.12),0 10px 26px -8px rgba(15,23,41,.14)}
-.doc:empty:before{content:attr(data-ph);color:#aeb7c8;font-family:"Microsoft YaHei",sans-serif;font-size:13.5px;line-height:1.85}
+.doc:empty:before{content:"✂ "attr(data-ph);color:#aeb7c8;font-family:"Microsoft YaHei",sans-serif;font-size:13.5px;line-height:2.1;display:block;text-align:center;padding:46px 18px}
 .doc p,.doc li,.doc blockquote,.doc h2,.doc h3,.doc h4{
   font-family:var(--bfont);font-size:var(--bsize);line-height:var(--bline);margin:0;overflow-wrap:anywhere;
   text-indent:calc(var(--bindent) * 1em);color:#000}
@@ -156,9 +156,16 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 @keyframes cardIn{from{transform:translateY(8px)}to{transform:none}}
 .img-item .row1{display:flex;align-items:center;gap:11px;flex-wrap:wrap}
 .img-item .row2{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
-.img-item .thumb{width:62px;height:62px;flex:none;border-radius:13px;object-fit:contain;background:#f5f7fc;
+.img-item .thw{position:relative;width:62px;height:62px;flex:none;border-radius:13px;overflow:hidden;background:#f5f7fc;
+  border:1px solid var(--line-2)}
+.img-item .thw:after{content:"";position:absolute;inset:0;margin:auto;width:22px;height:22px;border-radius:50%;
+  border:2.5px solid rgba(90,92,240,.22);border-top-color:var(--brand);
+  animation:spin .7s linear infinite;opacity:0;transition:opacity .2s var(--ease)}
+.img-item .thw.loading:after{opacity:1}
+.img-item .thumb{width:100%;height:100%;object-fit:contain;display:block;background:#f5f7fc;
   border:1px solid var(--line-2);transition:opacity .35s var(--ease)}
 .img-item .thumb.loading{opacity:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 .img-item .thumb:active{transform:scale(.96)}
 .img-item .m{flex:1;min-width:0}
 .img-item .m b{display:block;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px}
@@ -267,12 +274,21 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
 .st-box b{color:var(--ink)}
 
 /* ───────── 提示 / 放大 ───────── */
-.toast{position:fixed;left:50%;bottom:calc(var(--chrome-h,140px) + 10px);z-index:99;display:flex;align-items:center;gap:8px;
-  padding:12px 18px;border-radius:14px;background:rgba(15,20,34,.95);color:#fff;font-size:13px;font-weight:500;
-  border:1px solid rgba(255,255,255,.09);backdrop-filter:blur(10px);box-shadow:0 18px 44px rgba(15,23,41,.4);
-  opacity:0;pointer-events:none;max-width:86vw;text-align:left;
-  transform:translate(-50%,18px) scale(.96);transition:transform .3s var(--ease),opacity .3s var(--ease)}
+.toast{position:fixed;left:50%;bottom:calc(var(--chrome-h,140px) + 10px);z-index:99;display:flex;align-items:center;gap:10px;
+  padding:12px 16px 12px 13px;border-radius:15px;background:rgba(17,22,38,.96);color:#fff;font-size:13px;font-weight:500;overflow:hidden;
+  border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px);box-shadow:0 20px 50px rgba(15,23,41,.44);
+  opacity:0;pointer-events:none;max-width:88vw;text-align:left;--tc:linear-gradient(135deg,#818cf8,#6366f1);
+  transform:translate(-50%,24px) scale(.94);transition:transform .46s cubic-bezier(.18,.9,.3,1.18),opacity .3s var(--ease)}
+.toast:before{content:"";position:absolute;left:0;top:14%;bottom:14%;width:3px;border-radius:3px;background:var(--tc)}
 .toast.on{opacity:1;transform:translate(-50%,0) scale(1)}
+.toast .ic{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--tc);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.toast .ic svg{width:15px;height:15px}
+.toast .tx{line-height:1.45;padding-right:4px}
+.toast.ok{--tc:linear-gradient(135deg,#34d399,#10b981)}
+.toast.err{--tc:linear-gradient(135deg,#f87171,#ef4444)}
+.toast.warn{--tc:linear-gradient(135deg,#fbbf24,#f59e0b)}
+.toast.info{--tc:linear-gradient(135deg,#818cf8,#6366f1)}
 .viewer{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:16px;
   background:rgba(12,17,28,.76);backdrop-filter:blur(7px);opacity:0;visibility:hidden;transition:opacity .26s,visibility .26s}
 .viewer.on{opacity:1;visibility:visible}
@@ -405,7 +421,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.15</b>
+      <b>版本 v2026-09-17.16</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -445,7 +461,21 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   const isImgUrl=t=>{t=String(t||'').trim();
     return /^https?:\/\/\S+$/i.test(t)&&(/\.(png|jpe?g|gif|webp|bmp)(\?|#|$)/i.test(t)||/(mmbiz\.|qpic\.cn|qlogo\.cn)/i.test(t));};
 
-  function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2400);}
+  function toast(m,type){
+    const t=$('toast');
+    let k=type;
+    if(!k){
+      if(/✅|成功|已|✓|完成/.test(m))k='ok';
+      else if(/失败|错误|无法|拦|失效|丢失|没找到|删除/.test(m))k='err';
+      else if(/请|警告|注意|可能|不能|不可|未检测/.test(m))k='warn';
+      else k='info';
+    }
+    const txt=String(m||'').replace(/[✅❌⚠️]/g,'').replace(/\s+/g,' ').trim()||String(m||'');
+    const IC={ok:IC_OK,err:IC_ERR,warn:IC_WARN,info:IC_INFO};
+    t.className='toast '+k;
+    t.innerHTML='<span class="ic">'+IC[k]+'</span><span class="tx">'+txt.replace(/[<>]/g,c=>c==='<'?'&lt;':'&gt;')+'</span>';
+    t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2600);
+  }
   function popPill(el){el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');}
   function stats(){const n=doc.innerText.replace(/\s+/g,'').length;const el=$('textStats');const v=n+' 字';if(el.textContent!==v){el.textContent=v;popPill(el);}}
   function proc(on){$('procbar').classList.toggle('on',!!on);}
@@ -740,6 +770,10 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   const IC_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.4"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   const IC_DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   const IC_DEL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+  const IC_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const IC_ERR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  const IC_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  const IC_INFO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-5M12 8h.01"/><circle cx="12" cy="12" r="9"/></svg>';
   const EMPTY='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5a2 2 0 0 1 2.8 0L16 17.5"/><path d="M14.6 14.9l1.5-1.5a2 2 0 0 1 2.8 0L21 15.5"/></svg>粘贴正文后，较大的图片会自动提取到这里<br>点「复制」后到正文长按粘贴，或点「插入正文」直接放进来</div>';
   function extract(){
     const seen=new Set();
@@ -760,7 +794,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       const d=document.createElement('div');d.className='img-item';d.style.animationDelay=(i*45)+'ms';
       const cut=!!x.el._orig;
       d.innerHTML='<div class="row1">'
-        +'<img class="thumb" src="'+x.src+'" data-i="'+i+'" alt="" referrerpolicy="no-referrer">'
+        +'<span class="thw"><img class="thumb" src="'+x.src+'" data-i="'+i+'" alt="" referrerpolicy="no-referrer"></span>'
         +'<div class="m"><b>图片 '+(i+1)+'</b><small>'+(x.w||'?')+' × '+(x.h||'?')+' px</small></div>'
         +'<div class="acts">'
         +'<button class="mini" data-a="copy" data-i="'+i+'" title="复制图片">'+IC_COPY+'</button>'
@@ -776,8 +810,8 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     });
     // 缩略图淡入保险：只有确实没加载完才临时透明，且有超时兜底，绝不长期不可见
     box.querySelectorAll('img.thumb').forEach(im=>{
-      const done=()=>im.classList.remove('loading');
-      if(!im.complete) im.classList.add('loading');
+      const wrap=im.parentElement, done=()=>{im.classList.remove('loading');wrap.classList.remove('loading');};
+      if(!im.complete){im.classList.add('loading');wrap.classList.add('loading');}
       im.addEventListener('load',done); im.addEventListener('error',done);
       setTimeout(done,1600);
       // 可拖到左边正文
@@ -1063,7 +1097,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       }
     },130);
   });
-  doc.addEventListener('input',()=>{stats();});
+  doc.addEventListener('input',()=>{stats();toggleEmpty();});
   doc.addEventListener('dragover',e=>{e.preventDefault();try{e.dataTransfer.dropEffect='copy';}catch(err){}});
   doc.addEventListener('drop',e=>{
     e.preventDefault();
@@ -1077,6 +1111,11 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   });
 
   /* ── 初始化 ── */
+  function toggleEmpty(){
+    const g=$('emptyGuide');if(!g)return;
+    const empty=!doc.textContent.trim() && !doc.querySelector('img');
+    g.classList.toggle('on',empty);
+  }
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
   document.querySelectorAll('.sbtn').forEach(function(b){b.addEventListener('mousedown',function(e){e.preventDefault();});b.addEventListener('click',function(e){e.preventDefault();if(window.__mStyle){window.__mStyle(b.dataset.style);return;}if(window.__mRestore)window.__mRestore();applyStyle(b.dataset.style);});});
@@ -1084,7 +1123,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   $('formatBtn').onclick=formatDoc;
   $('copyBtn').onclick=copyRich;
   $('wordBtn').onclick=exportWord;
-  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toast('已清空');};
+  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toggleEmpty();toast('已清空');};
   const msEl=$('minSide');
   if(msEl){
     msEl.value=minSide;
@@ -1945,7 +1984,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.__mAll=applyAll;
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.15';
+  var VER='2026-09-17.16';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
