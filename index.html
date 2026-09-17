@@ -488,13 +488,15 @@ button,a{-webkit-tap-highlight-color:transparent}
   function waitImages(root){return Promise.all([...root.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;}))).catch(()=>{});}
   function insertHTML(html){
     doc.focus();
-    let ok=false;try{ok=document.execCommand('insertHTML',false,html);}catch(e){}
-    if(ok)return;
-    const sel=window.getSelection();
     const box=document.createElement('div');box.innerHTML=html;
     const frag=document.createDocumentFragment();while(box.firstChild)frag.appendChild(box.firstChild);
-    if(sel&&sel.rangeCount&&doc.contains(sel.anchorNode)){const r=sel.getRangeAt(0);r.deleteContents();r.insertNode(frag);}
-    else doc.appendChild(frag);
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount&&doc.contains(sel.anchorNode)){
+      const r=sel.getRangeAt(0);r.deleteContents();
+      // 用 Range 碎片插入，保证多图 HTML 不丢节点（execCommand('insertHTML') 对多图会随机掉图）
+      try{r.insertNode(frag);}
+      catch(e){let ok=false;try{ok=document.execCommand('insertHTML',false,html);}catch(_){}if(!ok)doc.appendChild(frag);}
+    }else doc.appendChild(frag);
   }
 
   /* ── 排版设置 ── */
@@ -939,7 +941,7 @@ button,a{-webkit-tap-highlight-color:transparent}
     c.querySelectorAll('img').forEach(e=>{e.style.cssText='max-width:100%;height:auto;display:block;margin:12pt auto;';});
     // 只复制"看得见的内容"：被过滤的小图、以及未打开开关时的文章原图，都不带走
     c.querySelectorAll('img.skip').forEach(e=>e.remove());
-    if(!$('keepInDoc').checked)c.querySelectorAll('img.ext').forEach(e=>e.remove());
+    // 文章原图(.ext)无论开关都保留在复制结果里——否则粘到公众号后照片全丢
     c.querySelectorAll('p,div,section').forEach(e=>{if(!e.textContent.trim()&&!e.querySelector('img'))e.remove();});
     return c;
   }
