@@ -163,7 +163,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 @keyframes pillPop{0%{transform:scale(1)}45%{transform:scale(1.14)}100%{transform:scale(1)}}
 
 /* ───────── 大窗：纸张 ───────── */
-.doc-scroll{flex:1;min-height:0;overflow:auto;padding:32px 26px 40px;
+.doc-scroll{flex:1;min-height:0;overflow:auto;padding:32px 26px 40px;position:relative;}
   background:
     radial-gradient(900px 300px at 50% -140px,rgba(90,92,240,.10),transparent 70%),
     radial-gradient(700px 260px at 100% 108%,rgba(201,154,46,.08),transparent 70%),
@@ -185,7 +185,7 @@ button,a{-webkit-tap-highlight-color:transparent}
     0 0 0 4px rgba(90,92,240,.12),
     0 12px 28px -8px rgba(15,23,41,.14),
     0 40px 80px -40px rgba(15,23,41,.4)}
-.doc:empty:before{content:attr(data-ph);color:#aeb7c8;font-family:"Microsoft YaHei",sans-serif;font-size:13.5px;line-height:1.95}
+.doc:empty:before{content:""}
 .doc p,.doc li,.doc blockquote,.doc h2,.doc h3,.doc h4{
   font-family:var(--bfont);font-size:var(--bsize);line-height:var(--bline);margin:0;
   text-indent:calc(var(--bindent) * 1em);color:#000}
@@ -225,9 +225,16 @@ button,a{-webkit-tap-highlight-color:transparent}
 .cbtn.ghost{flex:0 0 auto;padding:0 10px;color:var(--muted-2)}
 @keyframes cardIn{from{transform:translateY(9px) scale(.985)}to{transform:none}}
 .img-item:hover{border-color:#cfd6ef;box-shadow:var(--sh-2);transform:translateY(-2px)}
-.img-item .thumb{width:64px;height:64px;flex:none;border-radius:12px;object-fit:contain;background:#f5f7fc;
-  border:1px solid var(--line-2);cursor:zoom-in;transition:opacity .35s var(--ease),filter .18s,transform .18s}
+.img-item .thw{position:relative;width:64px;height:64px;flex:none;border-radius:12px;overflow:hidden;background:#f5f7fc;
+  border:1px solid var(--line-2)}
+.img-item .thw:after{content:"";position:absolute;inset:0;margin:auto;width:22px;height:22px;border-radius:50%;
+  border:2.5px solid rgba(90,92,240,.22);border-top-color:var(--brand);
+  animation:spin .7s linear infinite;opacity:0;transition:opacity .2s var(--ease)}
+.img-item .thw.loading:after{opacity:1}
+.img-item .thumb{width:100%;height:100%;object-fit:contain;display:block;cursor:zoom-in;
+  transition:opacity .35s var(--ease),filter .18s,transform .18s}
 .img-item .thumb.loading{opacity:0}
+@keyframes spin{to{transform:rotate(360deg)}}
 .img-item .thumb:hover{filter:brightness(1.06);transform:scale(1.03)}
 .img-item .m{flex:1;min-width:0}
 .img-item .m b{display:block;font-size:11.5px;font-weight:700;color:var(--ink);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -280,12 +287,22 @@ button,a{-webkit-tap-highlight-color:transparent}
 .switch input:focus-visible + .track{box-shadow:var(--ring)}
 
 /* ───────── 提示 / 放大 ───────── */
-.toast{position:fixed;left:50%;bottom:30px;z-index:99;display:flex;align-items:center;gap:9px;padding:12px 20px;
-  border-radius:14px;background:rgba(15,20,34,.95);color:#fff;font-size:13px;font-weight:500;
-  border:1px solid rgba(255,255,255,.09);
-  backdrop-filter:blur(10px);box-shadow:0 20px 48px rgba(15,23,41,.4);opacity:0;pointer-events:none;
-  transform:translate(-50%,22px) scale(.96);transition:transform .3s var(--ease),opacity .3s var(--ease);max-width:78vw}
+.toast{position:fixed;left:50%;bottom:30px;z-index:99;display:flex;align-items:center;gap:11px;padding:13px 18px 13px 14px;
+  border-radius:15px;background:rgba(17,22,38,.96);color:#fff;font-size:13px;font-weight:500;overflow:hidden;
+  border:1px solid rgba(255,255,255,.1);box-shadow:0 22px 52px rgba(15,23,41,.44);
+  backdrop-filter:blur(12px);opacity:0;pointer-events:none;
+  transform:translate(-50%,28px) scale(.94);transition:transform .46s cubic-bezier(.18,.9,.3,1.18),opacity .3s var(--ease);max-width:82vw;
+  --tc:linear-gradient(135deg,#818cf8,#6366f1)}
+.toast:before{content:"";position:absolute;left:0;top:14%;bottom:14%;width:3px;border-radius:3px;background:var(--tc)}
 .toast.on{opacity:1;transform:translate(-50%,0) scale(1)}
+.toast .ic{flex:none;width:27px;height:27px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--tc);color:#fff;box-shadow:0 3px 10px rgba(0,0,0,.28)}
+.toast .ic svg{width:15px;height:15px}
+.toast .tx{line-height:1.45;padding-right:4px}
+.toast.ok{--tc:linear-gradient(135deg,#34d399,#10b981)}
+.toast.err{--tc:linear-gradient(135deg,#f87171,#ef4444)}
+.toast.warn{--tc:linear-gradient(135deg,#fbbf24,#f59e0b)}
+.toast.info{--tc:linear-gradient(135deg,#818cf8,#6366f1)}
 .viewer{position:fixed;inset:0;z-index:120;display:flex;align-items:center;justify-content:center;padding:34px;
   background:rgba(12,17,28,.74);backdrop-filter:blur(7px);opacity:0;visibility:hidden;
   transition:opacity .26s var(--ease),visibility .26s}
@@ -293,6 +310,18 @@ button,a{-webkit-tap-highlight-color:transparent}
 .viewer img{max-width:92vw;max-height:86vh;border-radius:12px;background:#fff;box-shadow:0 34px 90px rgba(0,0,0,.6);
   transform:scale(.96);transition:transform .3s var(--ease)}
 .viewer.on img{transform:scale(1)}
+
+/* 空状态引导卡 */
+.empty-guide{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;color:var(--muted-2);
+  pointer-events:none;opacity:0;transform:translateY(10px);transition:opacity .45s var(--ease),transform .45s var(--ease)}
+.empty-guide.on{opacity:1;transform:none}
+.empty-guide .eg-ic{width:76px;height:76px;border-radius:24px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#fff,#eef1fb);border:1px solid var(--line);box-shadow:var(--sh-2);color:var(--brand)}
+.empty-guide .eg-ic svg{width:40px;height:40px}
+.empty-guide .eg-t{font-size:15px;font-weight:800;color:var(--ink);letter-spacing:.2px}
+.empty-guide .eg-s{font-size:12.5px;line-height:1.95;max-width:340px}
+.empty-guide .eg-s b{color:var(--brand);font-weight:700}
 
 @media(max-width:1140px){
   .topbar{gap:12px;padding:8px 16px}
@@ -395,6 +424,11 @@ button,a{-webkit-tap-highlight-color:transparent}
       <div class="phead"><span class="ttl"><i class="pdot"></i>大窗 · 编辑 / 预览</span><span class="pill" id="textStats">0 字</span></div>
       <div class="doc-scroll">
         <div id="doc" class="doc" contenteditable="true" spellcheck="false" data-ph="把微信 / 网页 / Word 的正文（含图片）直接粘贴到这里…"></div>
+        <div class="empty-guide" id="emptyGuide">
+          <div class="eg-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v5h5"/><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M9 13h6M9 17h6M9 9h2"/></svg></div>
+          <div class="eg-t">把文章粘贴到这里开始排版</div>
+          <div class="eg-s">支持 <b>微信 / 网页 / Word</b> 正文，连同图片一并粘贴即可<br>粘贴后自动识别图片、套用公文格式（仿宋 · 三号 · 28 磅 · 首行缩进 2 字）</div>
+        </div>
       </div>
     </section>
 
@@ -449,7 +483,21 @@ button,a{-webkit-tap-highlight-color:transparent}
   const curPt =()=>SIZES[+$('fSize').value]?SIZES[+$('fSize').value][1]:16;
   const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-  function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2400);}
+  function toast(m,type){
+    const t=$('toast');
+    let k=type;
+    if(!k){
+      if(/✅|成功|已|✓|完成/.test(m))k='ok';
+      else if(/失败|错误|无法|拦|失效|丢失|没找到|删除/.test(m))k='err';
+      else if(/请|警告|注意|可能|不能|不可|未检测/.test(m))k='warn';
+      else k='info';
+    }
+    const txt=String(m||'').replace(/[✅❌⚠️]/g,'').replace(/\s+/g,' ').trim()||String(m||'');
+    const IC={ok:IC_OK,err:IC_ERR,warn:IC_WARN,info:IC_INFO};
+    t.className='toast '+k;
+    t.innerHTML='<span class="ic">'+IC[k]+'</span><span class="tx">'+txt.replace(/[<>]/g,c=>c==='<'?'&lt;':'&gt;')+'</span>';
+    t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2600);
+  }
   function popPill(el){el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop');}
   function stats(){const n=doc.innerText.replace(/\s+/g,'').length;const el=$('textStats');const v=n+' 字';if(el.textContent!==v){el.textContent=v;popPill(el);}}
   function proc(on){$('procbar').classList.toggle('on',!!on);}
@@ -741,6 +789,10 @@ button,a{-webkit-tap-highlight-color:transparent}
   const IC_COPY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2.4"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   const IC_DL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
   const IC_DEL='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+  const IC_OK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+  const IC_ERR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  const IC_WARN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>';
+  const IC_INFO='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16v-5M12 8h.01"/><circle cx="12" cy="12" r="9"/></svg>';
   const EMPTY='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17.5l4.5-4.5a2 2 0 0 1 2.8 0L16 17.5"/><path d="M14.6 14.9l1.5-1.5a2 2 0 0 1 2.8 0L21 15.5"/></svg>粘贴正文后，较大的图片会自动提取到这里<br>可直接拖到左边正文，也可复制、下载或统一尺寸</div>';
   function extract(){
     const seen=new Set();
@@ -761,7 +813,7 @@ button,a{-webkit-tap-highlight-color:transparent}
       const d=document.createElement('div');d.className='img-item';d.style.animationDelay=(i*45)+'ms';
       const cut=!!x.el._orig;
       d.innerHTML='<div class="row1">'
-        +'<img class="thumb" src="'+x.src+'" data-i="'+i+'" alt="" referrerpolicy="no-referrer">'
+        +'<span class="thw"><img class="thumb" src="'+x.src+'" data-i="'+i+'" alt="" referrerpolicy="no-referrer"></span>'
         +'<div class="m"><b>图片 '+(i+1)+'</b><small>'+(x.w||'?')+' × '+(x.h||'?')+' px</small></div>'
         +'<div class="acts">'
         +'<button class="mini" data-a="copy" data-i="'+i+'" title="复制图片">'+IC_COPY+'</button>'
@@ -777,8 +829,8 @@ button,a{-webkit-tap-highlight-color:transparent}
     });
     // 缩略图淡入保险：只有确实没加载完才临时透明，且有超时兜底，绝不长期不可见
     box.querySelectorAll('img.thumb').forEach(im=>{
-      const done=()=>im.classList.remove('loading');
-      if(!im.complete) im.classList.add('loading');
+      const wrap=im.parentElement, done=()=>{im.classList.remove('loading');wrap.classList.remove('loading');};
+      if(!im.complete){im.classList.add('loading');wrap.classList.add('loading');}
       im.addEventListener('load',done); im.addEventListener('error',done);
       setTimeout(done,1600);
       // 可拖到左边正文
@@ -1061,7 +1113,7 @@ button,a{-webkit-tap-highlight-color:transparent}
       }
     },130);
   });
-  doc.addEventListener('input',()=>{stats();});
+  doc.addEventListener('input',()=>{stats();toggleEmpty();});
   doc.addEventListener('dragover',e=>{e.preventDefault();try{e.dataTransfer.dropEffect='copy';}catch(err){}});
   doc.addEventListener('drop',e=>{
     e.preventDefault();
@@ -1075,6 +1127,11 @@ button,a{-webkit-tap-highlight-color:transparent}
   });
 
   /* ── 初始化 ── */
+  function toggleEmpty(){
+    const g=$('emptyGuide');if(!g)return;
+    const empty=!doc.textContent.trim() && !doc.querySelector('img');
+    g.classList.toggle('on',empty);
+  }
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
   document.querySelectorAll('.sbtn').forEach(b=>{b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>applyStyle(b.dataset.style));});
@@ -1082,7 +1139,7 @@ button,a{-webkit-tap-highlight-color:transparent}
   $('formatBtn').onclick=formatDoc;
   $('copyBtn').onclick=copyRich;
   $('wordBtn').onclick=exportWord;
-  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toast('已清空');};
+  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toggleEmpty();toast('已清空');};
   const msEl=$('minSide');
   if(msEl){
     msEl.value=minSide;
