@@ -421,7 +421,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.16</b>
+      <b>版本 v2026-09-17.17</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -1097,7 +1097,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       }
     },130);
   });
-  doc.addEventListener('input',()=>{stats();toggleEmpty();});
+  doc.addEventListener('input',stats);
   doc.addEventListener('dragover',e=>{e.preventDefault();try{e.dataTransfer.dropEffect='copy';}catch(err){}});
   doc.addEventListener('drop',e=>{
     e.preventDefault();
@@ -1111,12 +1111,6 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   });
 
   /* ── 初始化 ── */
-  function toggleEmpty(){
-    const g=$('emptyGuide');if(!g)return;
-    const empty=!doc.textContent.trim() && !doc.querySelector('img');
-    g.classList.toggle('on',empty);
-  }
-  toggleEmpty();
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
   document.querySelectorAll('.sbtn').forEach(function(b){b.addEventListener('mousedown',function(e){e.preventDefault();});b.addEventListener('click',function(e){e.preventDefault();if(window.__mStyle){window.__mStyle(b.dataset.style);return;}if(window.__mRestore)window.__mRestore();applyStyle(b.dataset.style);});});
@@ -1124,7 +1118,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   $('formatBtn').onclick=formatDoc;
   $('copyBtn').onclick=copyRich;
   $('wordBtn').onclick=exportWord;
-  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toggleEmpty();toast('已清空');};
+  $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toast('已清空');};
   const msEl=$('minSide');
   if(msEl){
     msEl.value=minSide;
@@ -1985,7 +1979,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.__mAll=applyAll;
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.16';
+  var VER='2026-09-17.17';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
