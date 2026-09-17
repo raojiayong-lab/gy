@@ -1132,6 +1132,7 @@ button,a{-webkit-tap-highlight-color:transparent}
     const empty=!doc.textContent.trim() && !doc.querySelector('img');
     g.classList.toggle('on',empty);
   }
+  toggleEmpty();
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
   document.querySelectorAll('.sbtn').forEach(b=>{b.addEventListener('mousedown',e=>e.preventDefault());b.addEventListener('click',()=>applyStyle(b.dataset.style));});
