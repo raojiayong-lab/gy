@@ -5,6 +5,21 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="referrer" content="no-referrer">
 <title>贵阳幼专 · 图文排版（公文版）</title>
+<script>
+/* 设备自适应：手机访问根链接自动进手机版；带 ?force=desktop 不跳 */
+(function(){
+  try{
+    var p = location.pathname;
+    if (p.indexOf('m.html') !== -1) return;            // 手机版自身不自动跳转
+    var q = new URLSearchParams(location.search);
+    if (q.get('force') === 'desktop') return;          // 用户手动选了电脑版
+    var ua = navigator.userAgent || '';
+    var isMobile = /Mobi|Android|iPhone|iPad|iPod|Windows Phone|webOS|BlackBerry|IEMobile/i.test(ua)
+                || (('ontouchstart' in window) && /Mac/.test(navigator.platform || ''));
+    if (isMobile) location.replace('m.html' + (q.get('force')==='mobile' ? '?force=mobile' : ''));
+  }catch(e){}
+})();
+</script>
 <style>
 :root{
   --bg:#e7ebf6;--canvas:#e5e9f4;
@@ -366,7 +381,7 @@ button,a{-webkit-tap-highlight-color:transparent}
       <button class="sbtn" data-style="cen">居中</button>
       <button class="sbtn" data-style="rig">右对齐</button>
       <button class="sbtn" data-style="flush" title="取消该段首行缩进（段首按退格也可以）">去缩进</button>
-      <a id="verSwitch" href="m.html" target="_self" title="切换到手机版" style="display:inline-flex;align-items:center;gap:5px;height:31px;padding:0 13px;margin-left:9px;border:1px solid rgba(90,92,240,.5);border-radius:9px;background:linear-gradient(135deg,#5a5cf0,#8b5cf6);color:#fff;font-weight:700;font-size:12.5px;line-height:1;text-decoration:none;white-space:nowrap;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 8px rgba(90,92,240,.28)">📱 手机版</a>
+      <a id="verSwitch" href="m.html?force=mobile" target="_self" title="切换到手机版" style="display:inline-flex;align-items:center;gap:5px;height:31px;padding:0 13px;margin-left:9px;border:1px solid rgba(90,92,240,.5);border-radius:9px;background:linear-gradient(135deg,#5a5cf0,#8b5cf6);color:#fff;font-weight:700;font-size:12.5px;line-height:1;text-decoration:none;white-space:nowrap;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 8px rgba(90,92,240,.28)">📱 手机版</a>
     </div>
     <div class="procbar" id="procbar"></div>
   </div>
