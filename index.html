@@ -583,11 +583,16 @@ button,a{-webkit-tap-highlight-color:transparent}
 
   /* ── 微信图片防盗链修复（不依赖任何第三方代理） ── */
   const RETRYRE=/[?&]_r=1/;
+  const healTried=new Set();let healing=false;
   async function healWxImages(){
     let changed=false;
     [...doc.querySelectorAll('img')].forEach(im=>{
       const src=im.getAttribute('src')||'';
       im.setAttribute('referrerpolicy','no-referrer');
+      if(/^http:\/\//i.test(src)){        // https 页面加载 http 图片会被浏览器拦（混合内容），先升级
+        im.setAttribute('src', src.replace(/^http:\/\//i,'https://'));
+        changed=true;return;
+      }
       const bad = im.complete && (im.naturalWidth===0 || (im.naturalWidth===140&&im.naturalHeight===140));
       if(bad && !RETRYRE.test(src) && /^https?:/i.test(src)){
         im.setAttribute('src', src+(src.indexOf('?')>=0?'&':'?')+'_r=1');
@@ -596,26 +601,58 @@ button,a{-webkit-tap-highlight-color:transparent}
     });
     return changed;
   }
+  /* 失败图兜底：走沙箱（不透明源 Origin:null）把原图拉回来转 dataURL */
+  async function rawHeal(){
+    const bads=[...doc.querySelectorAll('img')].filter(im=>{
+      const u=im.src||'';
+      return im.complete && im.naturalWidth===0 && /^https?:/i.test(u) && !healTried.has(u);
+    });
+    if(!bads.length)return 0;
+    let fixed=0;
+    for(const im of bads){
+      const u=im.src;healTried.add(u);
+      try{im.src=await rawViaSandbox(u,'image/png');fixed++;}catch(e){}
+    }
+    return fixed;
+  }
+  /* 发现加载失败的图时自动尝试修复（每张只试一次，不循环） */
+  function maybeHeal(){
+    if(healing)return;
+    const has=[...doc.querySelectorAll('img')].some(im=>{
+      const u=im.src||'';
+      return im.complete&&im.naturalWidth===0&&/^https?:/i.test(u)&&!healTried.has(u);
+    });
+    if(!has)return;
+    healing=true;
+    rawHeal().then(async fixed=>{
+      healing=false;
+      if(fixed>0){await waitImages(doc);extract();toast('已自动修复 '+fixed+' 张加载失败的图片 ✅');}
+      else{toast('有图片无法加载：可能已被删除或链接失效');}
+    }).catch(()=>{healing=false;});
+  }
   async function settle(){
     proc(true);
     await waitImages(doc);
-    const changed=await healWxImages();
-    if(changed)await waitImages(doc);
+    let changed=await healWxImages();
+    if(changed){await waitImages(doc);changed=false;}
+    await rawHeal();
+    await waitImages(doc);
     applyFilter();
     extract();
     proc(false);
+    maybeHeal();
   }
 
   /* ── 裁剪引擎 ── */
   const SB_HTML='<!doctype html><meta charset="utf-8"><script>'
-    +"window.addEventListener('message',async(e)=>{const d=e.data||{};if(d.t!=='crop')return;"
+    +"window.addEventListener('message',async(e)=>{const d=e.data||{};if(d.t!=='crop'&&d.t!=='raw')return;"
     +"try{const im=new Image();im.crossOrigin='anonymous';"
     +"await new Promise((res,rej)=>{im.onload=res;im.onerror=()=>rej(new Error('load'));im.src=d.url;});"
-    +"const c=document.createElement('canvas');c.width=d.w;c.height=d.h;const x=c.getContext('2d');"
-    +"x.fillStyle='#fff';x.fillRect(0,0,d.w,d.h);try{x.imageSmoothingQuality='high';}catch(e){}"
-    +"x.drawImage(im,0,0,d.w,d.h);"
-    +"parent.postMessage({t:'crop',id:d.id,ok:true,data:c.toDataURL('image/jpeg',0.93)},'*');}"
-    +"catch(err){parent.postMessage({t:'crop',id:d.id,ok:false,err:String((err&&err.name)||err)},'*');}});"
+    +"const W=d.w||im.naturalWidth,H=d.h||im.naturalHeight;const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');"
+    +"x.fillStyle='#fff';x.fillRect(0,0,W,H);try{x.imageSmoothingQuality='high';}catch(e){}"
+    +"x.drawImage(im,0,0,W,H);"
+    +"const _m=d.mime||'image/png';const _o=d.t==='raw'?c.toDataURL(_m,_m==='image/jpeg'?0.93:undefined):c.toDataURL('image/jpeg',0.93);parent.postMessage({t:d.t,id:d.id,ok:true,data:_o},'*');}"
+    +"catch(err){parent.postMessage({t:d.t,id:d.id,ok:false,err:String((err&&err.name)||err)},'*');}});"
     +'<\/script>';
   function drawCrop(im,tw,th){
     const sw=im.naturalWidth,sh=im.naturalHeight;if(!sw||!sh)throw new Error('no size');
@@ -666,6 +703,16 @@ button,a{-webkit-tap-highlight-color:transparent}
       setTimeout(()=>{window.removeEventListener('message',onMsg);rej(new Error('timeout'));},15000);
     }));
   }
+  function rawViaSandbox(src,mime){
+    return ensureSandbox().then(()=>new Promise((res,rej)=>{
+      const id=++sbSeq;
+      const onMsg=e=>{const d=e.data;if(!d||d.t!=='raw'||d.id!==id)return;
+        window.removeEventListener('message',onMsg);d.ok?res(d.data):rej(new Error(d.err||'fail'));};
+      window.addEventListener('message',onMsg);
+      try{sbWin.postMessage({t:'raw',id:id,url:src,mime:mime||'image/png'},'*');}catch(e){rej(e);}
+      setTimeout(()=>{window.removeEventListener('message',onMsg);rej(new Error('timeout'));},20000);
+    }));
+  }
   async function cropImg(i,tw,th){
     const x=imgs[i];if(!x)return;
     const from=x.el._orig||x.el.src||x.src;
@@ -699,6 +746,7 @@ button,a{-webkit-tap-highlight-color:transparent}
       seen.add(u); return true;
     }).map(im=>({el:im,src:im.src,w:im.naturalWidth||im.width||0,h:im.naturalHeight||im.height||0}));
     renderImgs();
+    maybeHeal();
   }
   function renderImgs(){
     const box=$('imgList');
@@ -1057,6 +1105,7 @@ button,a{-webkit-tap-highlight-color:transparent}
     if(parseFloat(getComputedStyle(n).textIndent)>0){e.preventDefault();n.classList.add('flush');toast('已取消该段首行缩进');}
   });
 
+  window.__m={extract:extract,stats:stats,imgs:function(){return imgs;},toast:toast,raw:rawViaSandbox};
   applySettings();stats();renderImgs();
 })();
 </script>
