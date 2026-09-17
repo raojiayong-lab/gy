@@ -109,6 +109,9 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .selbar .sb-t{flex:none;font-size:10.5px;font-weight:800;color:var(--muted-2);letter-spacing:.08em}
 .selbar .sb-v{flex:none;width:56px;text-align:right;font-size:11.5px;font-weight:700;color:var(--ink);
   font-variant-numeric:tabular-nums}
+.selbar .snum{flex:none;width:54px;height:30px;padding:0 6px;border:1px solid var(--line-3);border-radius:9px;
+  background:#fff;font-size:12.5px;font-weight:700;color:var(--ink);text-align:center;font-variant-numeric:tabular-nums}
+.selbar .snum:focus{outline:0;border-color:var(--brand);box-shadow:var(--ring)}
 .slider{-webkit-appearance:none;appearance:none;flex:1;min-width:0;height:26px;background:transparent;margin:0;padding:0;border:0}
 .slider::-webkit-slider-runnable-track{height:6px;border-radius:6px;
   background:linear-gradient(90deg,var(--brand),var(--brand-2))}
@@ -124,6 +127,9 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .sheet-row .zfit{flex:none;height:36px;padding:0 12px;border:1px solid var(--line-3);border-radius:10px;background:#fff;
   font-size:12px;font-weight:600;color:var(--muted)}
 .sheet-row .zfit:active{color:var(--brand);border-color:rgba(90,92,240,.55)}
+.sheet-row .znum{flex:none;width:54px;height:36px;padding:0 6px;border:1px solid var(--line-3);border-radius:10px;
+  background:#fff;font-size:13px;font-weight:700;color:var(--ink);text-align:center;font-variant-numeric:tabular-nums}
+.sheet-row .znum:focus{outline:0;border-color:var(--brand);box-shadow:var(--ring)}
 .sheet-row .k2{flex:none;width:60px;font-size:13px;color:var(--muted)}
 
 /* 快捷样式条 */
@@ -301,6 +307,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
         <span class="sb-t">选字</span>
         <input type="range" class="slider" id="selRange" min="0" max="100" step="1" value="0" aria-label="拖动选中文字">
         <span class="sb-v" id="selVal">0 字</span>
+        <input type="number" class="snum" id="selNum" min="0" max="9999" step="1" value="0" aria-label="输入选中字数" inputmode="numeric">
       </div>
       <div class="styles-bar" id="stylesBar"><button type="button" class="sbtn" data-style="h1">标题</button><button type="button" class="sbtn" data-style="p">正文</button><button type="button" class="sbtn" data-style="bold">加粗</button><button type="button" class="sbtn" data-style="cen">居中</button><button type="button" class="sbtn" data-style="rig">右对齐</button><button type="button" class="sbtn" data-style="flush">去缩进</button></div>
     </section>
@@ -343,6 +350,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     <div class="sheet-row"><span class="k2">纸张大小</span>
       <input type="range" class="slider" id="zoomRange" min="25" max="150" step="1" value="50" aria-label="纸张显示大小">
       <span class="zval" id="zoomVal">46%</span>
+      <input type="number" class="znum" id="zoomNum" min="25" max="150" step="1" value="46" aria-label="输入显示百分比" inputmode="numeric">
       <button class="zfit" type="button" id="zoomFit">适应</button>
     </div>
     <div class="sheet-row"><span class="k">字体</span><select id="fFont"></select></div>
@@ -372,7 +380,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.8</b>
+      <b>版本 v2026-09-17.9</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -1552,7 +1560,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   var ZKEY='gypec_mzoom_v1';
   var A4W=210/25.4*96;                                  // A4 宽 ≈ 793.7px
   var zoomOk=('zoom' in document.documentElement.style); // 手机 Chrome / Safari 都支持
-  var zRange=$('zoomRange'), zVal=$('zoomVal'), zFit=$('zoomFit');
+  var zRange=$('zoomRange'), zVal=$('zoomVal'), zFit=$('zoomFit'), zoomNum=$('zoomNum');
 
   function clampZ(z){ return Math.max(25,Math.min(150,Math.round(z||0))); }
   function setZoom(z,save){
@@ -1561,6 +1569,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     else { doc.style.transformOrigin='top left'; doc.style.transform='scale('+(z/100)+')'; }
     if(zRange)zRange.value=z;
     if(zVal)zVal.textContent=z+'%';
+    if(zoomNum)zoomNum.value=z;
     if(save!==false){ try{localStorage.setItem(ZKEY,z);}catch(e){} }
   }
   function fitZoom(){
@@ -1576,6 +1585,11 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     setZoom(fitZoom(),false);
     toast('已按屏宽显示完整 A4 版面（约 '+fitZoom()+'%）');
   });
+  if(zoomNum){
+    var onZoomNum=function(){ var z=clampZ(+zoomNum.value||25); setZoom(z); syncChromeH(); };
+    zoomNum.addEventListener('input',onZoomNum);
+    zoomNum.addEventListener('change',onZoomNum);
+  }
   (function(){
     var saved=null;
     try{ saved=localStorage.getItem(ZKEY); }catch(e){}
@@ -1584,7 +1598,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   })();
 
   /* ───────── 选字条：拖动就选中正文里的一段文字，再用下面按钮加粗/居中 ───────── */
-  var selRange=$('selRange'), selVal=$('selVal'), selBar=$('selbar'), selBase=null;
+  var selRange=$('selRange'), selVal=$('selVal'), selBar=$('selbar'), selNum=$('selNum'), selBase=null;
 
   // 只取"有实际文字"的文本节点：跳过段落之间那些纯换行/空白节点，
   // 否则起点会落在换行上，跨段落取内容会把结构弄乱。
@@ -1719,18 +1733,22 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     if(selVal&&+selRange.value===0)selVal.textContent='0 字';
   }
   if(selRange){
-    // 手指刚碰到滑块时，把"起点"定在当前光标/选区开头（拖动过程中不再变）
-    ['touchstart','pointerdown','mousedown'].forEach(function(ev){
-      selRange.addEventListener(ev,function(){
-        selBase=caretIndex();
-        syncSelRange();
-      },true);
+    // 手指刚碰到滑块/数字框时，把"起点"定在当前光标/选区开头（拖动过程中不再变）
+    [selRange, selNum].forEach(function(elm){
+      if(!elm)return;
+      ['touchstart','pointerdown','mousedown'].forEach(function(ev){
+        elm.addEventListener(ev,function(){
+          selBase=caretIndex();
+          syncSelRange();
+        },true);
+      });
     });
     selRange.addEventListener('input',function(){
       if(selBase===null)selBase=caretIndex();
       var n=+selRange.value;
       selectFrom(selBase,n);
       if(selVal)selVal.textContent=n+' 字';
+      if(selNum)selNum.value=n;
     });
     selRange.addEventListener('change',function(){
       var n=+selRange.value;
@@ -1738,6 +1756,24 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       if(n>0)toast('已选中 '+n+' 个字，现在点下面的按钮（加粗 / 居中…）即可生效');
     });
     syncSelRange();
+  }
+  if(selNum){
+    // 手动输入字数：从 selBase 处向后选 n 个字（selBase 在 pointerdown 时取过）
+    var onSelNum=function(){
+      if(selBase===null)selBase=caretIndex();
+      var t=totalChars();
+      var n=Math.max(0,Math.min(Math.round(+selNum.value||0),t));
+      selRange.value=n;
+      selectFrom(selBase,n);
+      if(selVal)selVal.textContent=n+' 字';
+    };
+    selNum.addEventListener('input',onSelNum);
+    selNum.addEventListener('change',function(){
+      onSelNum();
+      var n=Math.round(+selNum.value||0);
+      selBase=null;
+      if(n>0)toast('已选中 '+n+' 个字，现在点下面的按钮（加粗 / 居中…）即可生效');
+    });
   }
   window.addEventListener('resize',syncSelRange);
   doc.addEventListener('input',syncSelRange);
@@ -1829,7 +1865,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.__mAll=applyAll;
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.8';
+  var VER='2026-09-17.9';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
