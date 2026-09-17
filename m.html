@@ -421,7 +421,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.18</b>
+      <b>版本 v2026-09-17.19</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -483,15 +483,15 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   function waitImages(root){return Promise.all([...root.querySelectorAll('img')].map(im=>im.complete?0:new Promise(r=>{im.onload=im.onerror=r;}))).catch(()=>{});}
   function insertHTML(html){
     doc.focus();
-    const __sig=()=>doc.querySelectorAll('*').length+'|'+doc.textContent.length+'|'+doc.querySelectorAll('img').length;
-    const __b4=__sig();
-    let ok=false;try{ok=document.execCommand('insertHTML',false,html);}catch(e){}
-    if(__sig()!==__b4)return;   // 以「DOM 真的变了」为准，不信 execCommand 的返回值
-    const sel=window.getSelection();
     const box=document.createElement('div');box.innerHTML=html;
     const frag=document.createDocumentFragment();while(box.firstChild)frag.appendChild(box.firstChild);
-    if(sel&&sel.rangeCount&&doc.contains(sel.anchorNode)){const r=sel.getRangeAt(0);r.deleteContents();r.insertNode(frag);}
-    else doc.appendChild(frag);
+    const sel=window.getSelection();
+    if(sel&&sel.rangeCount&&doc.contains(sel.anchorNode)){
+      const r=sel.getRangeAt(0);r.deleteContents();
+      // 用 Range 碎片插入，保证多图 HTML 不丢节点（execCommand('insertHTML') 对多图会随机掉图）
+      try{r.insertNode(frag);}
+      catch(e){let ok=false;try{ok=document.execCommand('insertHTML',false,html);}catch(_){}if(!ok)doc.appendChild(frag);}
+    }else doc.appendChild(frag);
   }
 
   /* ── 排版设置 ── */
@@ -937,7 +937,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     c.querySelectorAll('img').forEach(e=>{e.style.cssText='max-width:100%;height:auto;display:block;margin:12pt auto;';});
     // 只复制"看得见的内容"：被过滤的小图、以及未打开开关时的文章原图，都不带走
     c.querySelectorAll('img.skip').forEach(e=>e.remove());
-    if(!$('keepInDoc').checked)c.querySelectorAll('img.ext').forEach(e=>e.remove());
+    // 文章原图(.ext)无论开关都保留在复制结果里——否则粘到公众号后照片全丢
     c.querySelectorAll('p,div,section').forEach(e=>{if(!e.textContent.trim()&&!e.querySelector('img'))e.remove();});
     return c;
   }
@@ -1979,7 +1979,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.__mAll=applyAll;
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.18';
+  var VER='2026-09-17.19';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
