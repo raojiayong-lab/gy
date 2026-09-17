@@ -1116,6 +1116,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     const empty=!doc.textContent.trim() && !doc.querySelector('img');
     g.classList.toggle('on',empty);
   }
+  toggleEmpty();
   try{document.execCommand('defaultParagraphSeparator',false,'p');}catch(e){}
   $('viewerImg').referrerPolicy='no-referrer';
   document.querySelectorAll('.sbtn').forEach(function(b){b.addEventListener('mousedown',function(e){e.preventDefault();});b.addEventListener('click',function(e){e.preventDefault();if(window.__mStyle){window.__mStyle(b.dataset.style);return;}if(window.__mRestore)window.__mRestore();applyStyle(b.dataset.style);});});
