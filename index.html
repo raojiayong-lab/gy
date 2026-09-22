@@ -1031,6 +1031,15 @@ button,a{-webkit-tap-highlight-color:transparent}
     return runs.length?runs:[{text:el.textContent.trim(),bold:false}];
   }
   function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000);}
+  function b64ToBytes(s){const bin=atob(s);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return u;}
+  // 取图片字节：data URL 直解 → 同域/带 CORS 远程图 fetch → 跨域图走沙箱 raw 模式转 dataURL（绕过防盗链）
+  async function imgBytes(src){
+    const m=src.match(/^data:([^;]+);base64,(.*)$/s);
+    if(m)return {buf:b64ToBytes(m[2]),mime:m[1]};
+    try{const r=await fetch(src,{referrerPolicy:'no-referrer'});if(r.ok){const mt=r.headers.get('content-type')||'image/png';return {buf:await r.arrayBuffer(),mime:mt};}}catch(e){}
+    try{const du=await rawViaSandbox(src,'image/png');const mm=du.match(/^data:([^;]+);base64,(.*)$/s);if(mm)return {buf:b64ToBytes(mm[2]),mime:mm[1]};}catch(e){}
+    return null;
+  }
   async function exportWord(){
     if(!doc.innerText.trim()){toast('请先粘贴内容');return;}
     clean();applySettings();await settle();
@@ -1045,12 +1054,17 @@ button,a{-webkit-tap-highlight-color:transparent}
         const children=[];
         for(const it of items){
           if(it.img){
-            if(!keep)continue;
+            // 仅「文章原图(.ext)」受 keep 开关控制；用户粘贴的图(.usr)始终导出（所见即所得）
+            if(!keep && it.img.classList.contains('ext'))continue;
             try{
-              const res=await fetch(it.img.src,{referrerPolicy:'no-referrer'});const buf=await res.arrayBuffer();
-              const nw=it.img.naturalWidth||600,nh=it.img.naturalHeight||400;
-              const w=480,h=Math.max(60,Math.round(480*((nh/nw)||.6)));
-              children.push(new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:120,after:120},children:[new ImageRun({data:buf,transformation:{width:w,height:h},type:'png'})]}));
+              const b=await imgBytes(it.img.src);
+              if(b){
+                const mime=b.mime||'image/png';
+                const ext=/jpe?g/i.test(mime)?'jpg':/gif/i.test(mime)?'gif':'png';
+                const nw=it.img.naturalWidth||600,nh=it.img.naturalHeight||400;
+                const w=480,h=Math.max(60,Math.round(480*((nh/nw)||.6)));
+                children.push(new Paragraph({alignment:AlignmentType.CENTER,spacing:{before:120,after:120},children:[new ImageRun({data:b.buf,transformation:{width:w,height:h},type:ext})]}));
+              }
             }catch(e){}
             continue;
           }
@@ -1071,7 +1085,9 @@ button,a{-webkit-tap-highlight-color:transparent}
     let body='';
     for(const it of items){
       if(it.img){
-        if(keep)body+='<p class="cen"><img src="'+it.img.src+'" style="max-width:420pt"></p>';
+        // 仅「文章原图(.ext)」受 keep 控制；用户粘贴的图(.usr)始终导出
+        if(it.img.classList.contains('ext')&&!keep)continue;
+        body+='<p class="cen"><img src="'+it.img.src+'" style="max-width:420pt"></p>';
         continue;
       }
       const el=it.el, al=alignOf(el), head=/^H[1-3]$/.test(el.tagName);
