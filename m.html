@@ -200,6 +200,10 @@ button{touch-action:manipulation;border:0;background:none;cursor:pointer}
 .imgset input::-webkit-outer-spin-button,.imgset input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .imgset .is-hint{color:var(--muted-2);font-size:11px}
 .imgset .is-info{color:var(--gold-2);font-size:11px;margin-top:4px;min-height:0}
+.dlall-btn{margin-top:10px;width:100%;border:0;border-radius:12px;padding:13px 12px;cursor:pointer;
+  background:linear-gradient(135deg,#5a5cf0,#8b5cf6);color:#fff;font-size:14px;font-weight:700;
+  box-shadow:0 3px 12px rgba(90,92,240,.3);-webkit-tap-highlight-color:transparent}
+.dlall-btn:active{transform:translateY(1px)}
 .switch{flex:none;display:flex;align-items:center;gap:11px;padding:14px;
   background:linear-gradient(180deg,#fff,#fbfcff);border-top:1px solid var(--line-2)}
 .switch .sw-txt{flex:1;font-size:12.5px;color:var(--muted)}
@@ -363,6 +367,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
           <span class="is-hint">0 = 不过滤</span>
         </div>
         <div class="is-info" id="filtInfo"></div>
+        <button class="dlall-btn" id="dlAllBtn" type="button">⬇ 一键下载全部图片到本地</button>
       </div>
       <label class="switch" for="keepInDoc">
         <span class="sw-txt">正文中也显示文章原图</span>
@@ -421,7 +426,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-17.19</b>
+      <b>版本 v2026-09-17.20</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -880,6 +885,23 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       toast('已下载 图片'+(i+1)+' ✅');
     }catch(e){window.open(x.src,'_blank');toast('已在新标签打开图片，右键可另存');}
   }
+  async function dlAll(){
+    if(!imgs.length){toast('没有可下载的图片');return;}
+    let ok=0,fail=0;
+    for(let i=0;i<imgs.length;i++){
+      const x=imgs[i];if(!x)continue;
+      try{
+        const blob=await (await fetch(x.src,{referrerPolicy:'no-referrer'})).blob();
+        const ext=/jpe?g/i.test(blob.type||'')?'jpg':'png';
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='图片'+(i+1)+'.'+ext;
+        document.body.appendChild(a);a.click();a.remove();
+        setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+        ok++;
+      }catch(e){fail++;}
+      await new Promise(r=>setTimeout(r,150)); // 间隔，避免浏览器把批量下载拦成一次
+    }
+    toast(fail?('已下载 '+ok+' 张，'+fail+' 张失败（可单张下）✅'):('已全部下载 '+ok+' 张到本地 ✅'));
+  }
   function delImg(i){
     const x=imgs[i];if(!x)return;
     const el=x.el;
@@ -1119,6 +1141,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   $('copyBtn').onclick=copyRich;
   $('wordBtn').onclick=exportWord;
   $('clearBtn').onclick=()=>{doc.innerHTML='';imgs=[];renderImgs();stats();toast('已清空');};
+  $('dlAllBtn').onclick=dlAll;
   const msEl=$('minSide');
   if(msEl){
     msEl.value=minSide;
@@ -1979,7 +2002,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.__mAll=applyAll;
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-17.19';
+  var VER='2026-09-17.20';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
