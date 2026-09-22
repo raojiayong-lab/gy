@@ -692,7 +692,8 @@ button,a{-webkit-tap-highlight-color:transparent}
     +"await new Promise((res,rej)=>{im.onload=res;im.onerror=()=>rej(new Error('load'));im.src=d.url;});"
     +"const W=d.w||im.naturalWidth,H=d.h||im.naturalHeight;const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');"
     +"x.fillStyle='#fff';x.fillRect(0,0,W,H);try{x.imageSmoothingQuality='high';}catch(e){}"
-    +"x.drawImage(im,0,0,W,H);"
+    +"var CR=Math.max((W/(im.naturalWidth||W))||1,(H/(im.naturalHeight||H))||1),CW=im.naturalWidth*CR,CH=im.naturalHeight*CR;"
+    +"x.drawImage(im,0,0,im.naturalWidth,im.naturalHeight,(W-CW)/2,(H-CH)/2,CW,CH);"
     +"const _m=d.mime||'image/png';const _o=d.t==='raw'?c.toDataURL(_m,_m==='image/jpeg'?0.93:undefined):c.toDataURL('image/jpeg',0.93);parent.postMessage({t:d.t,id:d.id,ok:true,data:_o},'*');}"
     +"catch(err){parent.postMessage({t:d.t,id:d.id,ok:false,err:String((err&&err.name)||err)},'*');}});"
     +'<\/script>';
@@ -701,7 +702,9 @@ button,a{-webkit-tap-highlight-color:transparent}
     const c=document.createElement('canvas');c.width=tw;c.height=th;
     const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,tw,th);
     try{x.imageSmoothingQuality='high';}catch(e){}
-    x.drawImage(im,0,0,sw,sh,0,0,tw,th);   // 整张图缩放到目标尺寸（不裁剪）
+    // cover：等比缩放铺满目标框，居中裁掉溢出（不变形，输出精确 WxH）
+    const r=Math.max(tw/sw, th/sh), dw=sw*r, dh=sh*r, dx=(tw-dw)/2, dy=(th-dh)/2;
+    x.drawImage(im,0,0,sw,sh,dx,dy,dw,dh);
     return c.toDataURL('image/jpeg',0.93);
   }
   function loadImg(im){
@@ -961,7 +964,7 @@ button,a{-webkit-tap-highlight-color:transparent}
     });
     c.querySelectorAll('.cen').forEach(e=>{e.style.textAlign='center';e.style.textIndent='0';});
     c.querySelectorAll('.rig').forEach(e=>{e.style.textAlign='right';e.style.textIndent='0';});
-    c.querySelectorAll('img').forEach(e=>{e.style.cssText='max-width:100%;height:auto;display:block;margin:12pt auto;';});
+    c.querySelectorAll('img').forEach(e=>{e.style.cssText='width:100%;height:auto;display:block;margin:12pt auto;';});
     // 只复制"看得见的内容"：被过滤的小图、以及未打开开关时的文章原图，都不带走
     c.querySelectorAll('img.skip').forEach(e=>e.remove());
     // 文章原图(.ext)无论开关都保留在复制结果里——否则粘到公众号后照片全丢
