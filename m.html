@@ -426,7 +426,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       <button class="nav-item" type="button" id="selfTestBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>自检<span class="sub">出问题先点这</span></button>
     </div>
     <div class="st-box" id="selfTest">
-      <b>版本 v2026-09-22.1</b>
+      <b>版本 v2026-09-22.2</b>
       如果按钮点了没反应，多半是手机还开着旧缓存：在浏览器菜单里选「刷新 / 重新加载」，或关掉这个标签页重新打开一次。
     </div>
     <div class="imgset" style="border-top:1px solid var(--line-2);padding:12px 2px 0;background:transparent">
@@ -437,7 +437,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js"></script>
+<!-- 手机版同样移除打开即加载的 docx CDN，改为「首次导出时按需异步加载」(loadDocx)，避免抽催 -->
 <script>
 (function(){
   const $=id=>document.getElementById(id);
@@ -1035,6 +1035,26 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     try{const du=await rawViaSandbox(src,'image/png');const mm=du.match(/^data:([^;]+);base64,(.*)$/s);if(mm)return {buf:b64ToBytes(mm[2]),mime:mm[1]};}catch(e){}
     return null;
   }
+
+  /* 首次导出 Word 时按需异步加载 docx 组件；CDN 不可达则在超时后返回 false，自动降级到 .doc */
+  let _docxPromise=null;
+  function loadDocx(timeoutMs){
+    timeoutMs=timeoutMs||8000;
+    if(window.docx)return Promise.resolve(true);
+    if(_docxPromise)return _docxPromise;
+    _docxPromise=new Promise(res=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js';
+      s.async=true;
+      let done=false;
+      const t=setTimeout(()=>{if(!done){done=true;res(false);}},timeoutMs);
+      s.onload=()=>{if(!done){done=true;clearTimeout(t);res(!!window.docx);}};
+      s.onerror=()=>{if(!done){done=true;clearTimeout(t);res(false);}};
+      document.head.appendChild(s);
+    });
+    return _docxPromise;
+  }
+
   async function exportWord(){
     if(!doc.innerText.trim()){toast('请先粘贴内容');return;}
     clean();applySettings();await settle();
@@ -1043,7 +1063,8 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
     const items=blockList(doc);
     const alignOf=el=>el.classList.contains('cen')?'center':el.classList.contains('rig')?'right':'left';
 
-    if(window.docx){
+    const hasDocx=await loadDocx();
+    if(hasDocx){
       try{
         const {Document,Packer,Paragraph,TextRun,ImageRun,AlignmentType}=docx;
         const children=[];
@@ -1073,9 +1094,8 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
           }));
         }
         const blob=await Packer.toBlob(new Document({sections:[{children}]}));
-        download(blob,'排版结果.docx');toast('已导出 Word（.docx）✅');
-      }catch(e){toast('导出失败：'+e.message);}
-      return;
+        download(blob,'排版结果.docx');toast('已导出 Word（.docx）✅');return;
+      }catch(e){toast('docx 生成失败，改用兼容格式：'+e.message);}
     }
     let body='';
     for(const it of items){
@@ -1097,7 +1117,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
       +'<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->'
       +'<style>@page{size:A4;margin:37mm 26mm 35mm 28mm}body{margin:0}p{margin:0}</style></head><body>'+body+'</body></html>';
     download(new Blob(['\ufeff'+html],{type:'application/msword'}),'排版结果.doc');
-    toast('已导出 Word（.doc）✅');
+    toast('已导出 Word（.doc 兼容格式）✅');
   }
 
   /* ── 粘贴 ── */
@@ -2021,7 +2041,7 @@ button.nav-item{width:100%;background:none;border:0;border-top:1px solid var(--l
   window.__mAll=applyAll;
 
   /* ───────── 自检（出问题时点一下，把结果截图发我） ───────── */
-  var VER='2026-09-22.1';
+  var VER='2026-09-22.2';
   function runSelfTest(){
     var imgs=[].slice.call(doc.querySelectorAll('img'));
     var vis=imgs.filter(function(i){return getComputedStyle(i).display!=='none';}).length;
