@@ -445,7 +445,7 @@ button,a{-webkit-tap-highlight-color:transparent}
 <div class="toast" id="toast"></div>
 <div class="viewer" id="viewer"><img id="viewerImg" alt=""></div>
 
-<script src="https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js"></script>
+<!-- docx 组件改为「首次点击导出时按需异步加载」，避免打开页面时因 jsdelivr 不可达而阻塞渲染（抽催） -->
 <script>
 (function(){
   const $=id=>document.getElementById(id);
@@ -1040,6 +1040,26 @@ button,a{-webkit-tap-highlight-color:transparent}
     try{const du=await rawViaSandbox(src,'image/png');const mm=du.match(/^data:([^;]+);base64,(.*)$/s);if(mm)return {buf:b64ToBytes(mm[2]),mime:mm[1]};}catch(e){}
     return null;
   }
+
+  /* 首次导出 Word 时按需异步加载 docx 组件；CDN 不可达则在超时后返回 false，自动降级到 .doc */
+  let _docxPromise=null;
+  function loadDocx(timeoutMs){
+    timeoutMs=timeoutMs||8000;
+    if(window.docx)return Promise.resolve(true);
+    if(_docxPromise)return _docxPromise;
+    _docxPromise=new Promise(res=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/docx@9.5.1/build/index.umd.js';
+      s.async=true;
+      let done=false;
+      const t=setTimeout(()=>{if(!done){done=true;res(false);}},timeoutMs);
+      s.onload=()=>{if(!done){done=true;clearTimeout(t);res(!!window.docx);}};
+      s.onerror=()=>{if(!done){done=true;clearTimeout(t);res(false);}};
+      document.head.appendChild(s);
+    });
+    return _docxPromise;
+  }
+
   async function exportWord(){
     if(!doc.innerText.trim()){toast('请先粘贴内容');return;}
     clean();applySettings();await settle();
@@ -1048,7 +1068,8 @@ button,a{-webkit-tap-highlight-color:transparent}
     const items=blockList(doc);
     const alignOf=el=>el.classList.contains('cen')?'center':el.classList.contains('rig')?'right':'left';
 
-    if(window.docx){
+    const hasDocx=await loadDocx();
+    if(hasDocx){
       try{
         const {Document,Packer,Paragraph,TextRun,ImageRun,AlignmentType}=docx;
         const children=[];
@@ -1078,9 +1099,8 @@ button,a{-webkit-tap-highlight-color:transparent}
           }));
         }
         const blob=await Packer.toBlob(new Document({sections:[{children}]}));
-        download(blob,'排版结果.docx');toast('已导出 Word（.docx）✅');
-      }catch(e){toast('导出失败：'+e.message);}
-      return;
+        download(blob,'排版结果.docx');toast('已导出 Word（.docx）✅');return;
+      }catch(e){toast('docx 生成失败，改用兼容格式：'+e.message);}
     }
     let body='';
     for(const it of items){
@@ -1102,7 +1122,7 @@ button,a{-webkit-tap-highlight-color:transparent}
       +'<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->'
       +'<style>@page{size:A4;margin:37mm 26mm 35mm 28mm}body{margin:0}p{margin:0}</style></head><body>'+body+'</body></html>';
     download(new Blob(['\ufeff'+html],{type:'application/msword'}),'排版结果.doc');
-    toast('已导出 Word（.doc）✅');
+    toast('已导出 Word（.doc 兼容格式）✅');
   }
 
   /* ── 粘贴 ── */
